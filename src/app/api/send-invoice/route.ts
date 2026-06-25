@@ -1,28 +1,39 @@
-"use server";
-
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { buildInvoiceEmail } from "@/lib/email";
 import type { Invoice, PhotographerProfile } from "@/lib/types";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(req: NextRequest) {
-  const body = await req.json() as {
-    invoice: Invoice;
-    profile: PhotographerProfile;
-    paymentUrl: string;
-  };
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error("RESEND_API_KEY environment variable is not set");
+    return NextResponse.json(
+      { error: "Email service not configured. Add RESEND_API_KEY to your Vercel environment variables." },
+      { status: 500 }
+    );
+  }
 
-  const { invoice, profile, paymentUrl } = body;
+  const resend = new Resend(apiKey);
 
-  if (!invoice || !profile || !paymentUrl) {
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  let body: { invoice?: Invoice; profile?: PhotographerProfile };
+  try {
+    body = await req.json() as { invoice?: Invoice; profile?: PhotographerProfile };
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const { invoice, profile } = body;
+
+  if (!invoice || !profile) {
+    return NextResponse.json({ error: "Missing invoice or profile" }, { status: 400 });
   }
 
   if (!invoice.clientEmail) {
-    return NextResponse.json({ error: "No client email on invoice" }, { status: 400 });
+    return NextResponse.json({ error: "Invoice has no client email" }, { status: 400 });
   }
+
+  // paymentUrl lives on the invoice object itself
+  const paymentUrl = invoice.paymentUrl ?? "";
 
   const { subject, html } = buildInvoiceEmail(invoice, profile, paymentUrl);
 
@@ -42,6 +53,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, emailId: data?.id });
   } catch (err) {
     console.error("Send invoice error:", err);
-    return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to send email" },
+      { status: 500 }
+    );
   }
 }

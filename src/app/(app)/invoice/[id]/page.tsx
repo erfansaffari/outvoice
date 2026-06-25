@@ -54,6 +54,7 @@ export default function InvoicePage() {
   const [profile, setProfile] = useState<PhotographerProfile | null>(null);
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<"success" | "error" | null>(null);
+  const [sendError, setSendError] = useState("");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -75,19 +76,24 @@ export default function InvoicePage() {
     if (!invoice || !profile) return;
     setSending(true);
     setSendResult(null);
+    setSendError("");
     try {
       const res = await fetch("/api/send-invoice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ invoice, profile }),
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error ?? `HTTP ${res.status}`);
+      }
       const updated: Invoice = { ...invoice, status: "sent" };
       saveInvoice(updated);
       setInvoice(updated);
       setSendResult("success");
-    } catch {
+    } catch (err) {
       setSendResult("error");
+      setSendError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setSending(false);
     }
@@ -157,7 +163,7 @@ export default function InvoicePage() {
 
       {sendResult === "error" && (
         <div style={{ padding: "10px 14px", background: "#FDF2F0", border: "1px solid #F4C7BF", borderRadius: "var(--radius-md)", fontSize: "var(--fs-body-sm)", color: "var(--danger)" }}>
-          Failed to send email. Check your Resend API key.
+          Failed to send email.{sendError ? ` ${sendError}` : ""}
         </div>
       )}
       {sendResult === "success" && (
