@@ -1,0 +1,45 @@
+/* ============================================================
+   SnapBill — Typography tokens
+   Everett everywhere. Light for large display (architectural,
+   airy), Medium for UI labels, eyebrows, and emphasis.
+   Generous tracking on small caps labels; tight on display.
+   ============================================================ */
+
+:root {
+  /* Families */
+  --font-sans: "Everett", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-display: var(--font-sans);
+  --font-mono: "Everett", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Weights (only Light + Medium ship; see fonts.css) */
+  --fw-light: 300;    /* @kind font */
+  --fw-regular: 400;  /* @kind font */
+  --fw-medium: 500;   /* @kind font */
+
+  /* Type scale — fluid, architectural. Reference values in px. */
+  --fs-display-xl: clamp(3.5rem, 6vw, 6rem);      /* @kind font */
+  --fs-display-l:  clamp(2.75rem, 4.5vw, 4.25rem); /* @kind font */
+  --fs-display-m:  clamp(2.25rem, 3.4vw, 3.25rem); /* @kind font */
+  --fs-h1: 2.5rem;         /* @kind font */
+  --fs-h2: 2rem;           /* @kind font */
+  --fs-h3: 1.5rem;         /* @kind font */
+  --fs-h4: 1.25rem;        /* @kind font */
+  --fs-body-lg: 1.1875rem; /* @kind font */
+  --fs-body: 1.0625rem;    /* @kind font */
+  --fs-body-sm: 0.9375rem; /* @kind font */
+  --fs-caption: 0.8125rem; /* @kind font */
+  --fs-eyebrow: 0.75rem;   /* @kind font */
+
+  /* Line heights */
+  --lh-tight: 1.02;     /* @kind font */
+  --lh-snug: 1.15;      /* @kind font */
+  --lh-normal: 1.5;     /* @kind font */
+  --lh-relaxed: 1.65;   /* @kind font */
+
+  /* Letter spacing */
+  --ls-display: -0.02em;   /* @kind font */
+  --ls-heading: -0.01em;   /* @kind font */
+  --ls-body: 0;            /* @kind font */
+  --ls-eyebrow: 0.18em;    /* @kind font */
+  --ls-label: 0.04em;      /* @kind font */
+}

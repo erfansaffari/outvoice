@@ -3,17 +3,10 @@
 import { useEffect, useState } from "react";
 import { loadContacts, saveContact, deleteContact, generateId } from "@/lib/store";
 import type { Contact } from "@/lib/types";
-import {
-  Plus,
-  Trash2,
-  Pencil,
-  Mail,
-  Phone,
-  User,
-  X,
-  Check,
-  Users,
-} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card, CardTitle } from "@/components/ui/Card";
+import { Plus, Trash2, Pencil, User, X, Check, Users } from "lucide-react";
 
 const EMPTY: Omit<Contact, "id"> = { name: "", email: "", phone: "" };
 
@@ -32,7 +25,6 @@ export default function ContactsPage() {
     setContacts(loadContacts());
   }
 
-  // ── Add ─────────────────────────────────────────────────────────────────
   function handleAdd() {
     if (!newDraft.name.trim()) return;
     saveContact({ id: generateId(), ...newDraft });
@@ -41,7 +33,6 @@ export default function ContactsPage() {
     refresh();
   }
 
-  // ── Edit ─────────────────────────────────────────────────────────────────
   function startEdit(c: Contact) {
     setEditingId(c.id);
     setDraft({ name: c.name, email: c.email, phone: c.phone });
@@ -58,198 +49,229 @@ export default function ContactsPage() {
     setEditingId(null);
   }
 
-  // ── Delete ───────────────────────────────────────────────────────────────
-  function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete ${name}? This can't be undone.`)) return;
+  function handleDelete(id: string) {
     deleteContact(id);
     refresh();
   }
 
   return (
-    <div className="space-y-6 pb-8">
-      <div className="flex items-center justify-between">
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", paddingBottom: "40px" }}>
+      {/* Heading */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {contacts.length} contact{contacts.length !== 1 ? "s" : ""} — pick from these when creating invoices
+          <h1 style={{ fontSize: "var(--fs-h2)", fontWeight: "var(--fw-light)", letterSpacing: "var(--ls-heading)", color: "var(--text-strong)" }}>
+            Contacts
+          </h1>
+          <p style={{ marginTop: "6px", fontSize: "var(--fs-body-sm)", color: "var(--text-muted)" }}>
+            Save client details once — pick them when creating invoices.
           </p>
         </div>
-        <button
-          onClick={() => { setShowAdd(true); setNewDraft(EMPTY); }}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => setShowAdd(true)}
+          iconLeft={<Plus size={14} />}
+          style={{ flexShrink: 0 }}
         >
-          <Plus size={16} /> Add contact
-        </button>
+          Add
+        </Button>
       </div>
 
       {/* Add form */}
       {showAdd && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 space-y-3">
-          <p className="text-sm font-semibold text-blue-800">New contact</p>
-          <div className="grid gap-3">
-            <div className="flex items-center gap-2">
-              <User size={15} className="text-blue-400 flex-shrink-0" />
-              <input
-                autoFocus
-                className={input}
-                placeholder="Full name *"
-                value={newDraft.name}
-                onChange={(e) => setNewDraft((d) => ({ ...d, name: e.target.value }))}
-                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Mail size={15} className="text-blue-400 flex-shrink-0" />
-              <input
-                className={input}
-                type="email"
-                placeholder="Email address"
-                value={newDraft.email}
-                onChange={(e) => setNewDraft((d) => ({ ...d, email: e.target.value }))}
-                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone size={15} className="text-blue-400 flex-shrink-0" />
-              <input
-                className={input}
-                type="tel"
-                placeholder="Phone number"
-                value={newDraft.phone}
-                onChange={(e) => setNewDraft((d) => ({ ...d, phone: e.target.value }))}
-                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              />
+        <Card>
+          <CardTitle icon={<Plus size={15} />}>New contact</CardTitle>
+          <div style={{ display: "grid", gap: "12px" }}>
+            <Input
+              label="Name *"
+              placeholder="Sarah & Tom"
+              value={newDraft.name}
+              onChange={(e) => setNewDraft((d) => ({ ...d, name: e.target.value }))}
+              autoFocus
+            />
+            <Input
+              label="Email"
+              type="email"
+              placeholder="sarah@example.com"
+              value={newDraft.email}
+              onChange={(e) => setNewDraft((d) => ({ ...d, email: e.target.value }))}
+            />
+            <Input
+              label="Phone"
+              type="tel"
+              placeholder="(555) 000-0000"
+              value={newDraft.phone}
+              onChange={(e) => setNewDraft((d) => ({ ...d, phone: e.target.value }))}
+            />
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "4px" }}>
+              <Button variant="ghost" size="sm" onClick={() => { setShowAdd(false); setNewDraft(EMPTY); }}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleAdd}
+                disabled={!newDraft.name.trim()}
+                iconLeft={<Check size={14} />}
+              >
+                Save contact
+              </Button>
             </div>
           </div>
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={handleAdd}
-              disabled={!newDraft.name.trim()}
-              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
-            >
-              <Check size={15} /> Save contact
-            </button>
-            <button
-              onClick={() => setShowAdd(false)}
-              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 px-3 py-2 text-sm"
-            >
-              <X size={15} /> Cancel
-            </button>
-          </div>
-        </div>
+        </Card>
       )}
 
-      {/* Contact list */}
-      {contacts.length === 0 && !showAdd ? (
-        <div className="py-20 flex flex-col items-center text-center gap-4">
-          <Users size={48} className="text-gray-200" />
-          <div>
-            <p className="text-gray-500 font-medium">No contacts yet</p>
-            <p className="text-gray-400 text-sm mt-1">Add clients here to quickly fill invoices.</p>
-          </div>
+      {/* Contacts list */}
+      {contacts.length === 0 ? (
+        <div
+          style={{
+            background: "var(--surface-card)",
+            border: "1px solid var(--border-hairline)",
+            borderRadius: "var(--radius-lg)",
+            padding: "48px 20px",
+            textAlign: "center",
+          }}
+        >
+          <Users size={28} style={{ color: "var(--text-subtle)", margin: "0 auto 12px" }} />
+          <p style={{ fontSize: "var(--fs-body-sm)", color: "var(--text-muted)", marginBottom: "14px" }}>
+            No contacts saved yet.
+          </p>
+          <Button variant="secondary" size="sm" onClick={() => setShowAdd(true)} iconLeft={<Plus size={14} />}>
+            Add your first contact
+          </Button>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100 shadow-sm overflow-hidden">
-          {contacts.map((c) =>
-            editingId === c.id ? (
-              <div key={c.id} className="px-5 py-4 bg-blue-50 space-y-3">
-                <div className="grid gap-3">
-                  <div className="flex items-center gap-2">
-                    <User size={15} className="text-blue-400 flex-shrink-0" />
-                    <input
-                      autoFocus
-                      className={input}
-                      placeholder="Full name *"
-                      value={draft.name}
-                      onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Mail size={15} className="text-blue-400 flex-shrink-0" />
-                    <input
-                      className={input}
-                      type="email"
-                      placeholder="Email address"
-                      value={draft.email}
-                      onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone size={15} className="text-blue-400 flex-shrink-0" />
-                    <input
-                      className={input}
-                      type="tel"
-                      placeholder="Phone number"
-                      value={draft.phone}
-                      onChange={(e) => setDraft((d) => ({ ...d, phone: e.target.value }))}
-                    />
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          {contacts.map((contact, i) => (
+            <div
+              key={contact.id}
+              style={{
+                borderTop: i === 0 ? "none" : "1px solid var(--border-hairline)",
+                padding: "16px 18px",
+              }}
+            >
+              {editingId === contact.id ? (
+                /* Edit mode */
+                <div style={{ display: "grid", gap: "12px" }}>
+                  <Input
+                    label="Name"
+                    value={draft.name}
+                    onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                    autoFocus
+                  />
+                  <Input
+                    label="Email"
+                    type="email"
+                    value={draft.email}
+                    onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
+                  />
+                  <Input
+                    label="Phone"
+                    type="tel"
+                    value={draft.phone}
+                    onChange={(e) => setDraft((d) => ({ ...d, phone: e.target.value }))}
+                  />
+                  <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                    <Button variant="ghost" size="sm" onClick={cancelEdit} iconLeft={<X size={14} />}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => commitEdit(contact.id)}
+                      disabled={!draft.name.trim()}
+                      iconLeft={<Check size={14} />}
+                    >
+                      Save
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => commitEdit(c.id)}
-                    disabled={!draft.name.trim()}
-                    className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 text-white px-3 py-1.5 rounded-lg text-sm font-semibold"
+              ) : (
+                /* View mode */
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "50%",
+                      background: "var(--teal-100)",
+                      color: "var(--teal-700)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
                   >
-                    <Check size={14} /> Save
-                  </button>
-                  <button
-                    onClick={cancelEdit}
-                    className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 px-2 py-1.5 text-sm"
-                  >
-                    <X size={14} /> Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div key={c.id} className="flex items-center gap-4 px-5 py-4">
-                {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <span className="text-blue-700 font-bold text-sm">
-                    {c.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+                    <User size={16} />
                   </span>
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900">{c.name}</p>
-                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5">
-                    {c.email && (
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <Mail size={11} /> {c.email}
-                      </span>
-                    )}
-                    {c.phone && (
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <Phone size={11} /> {c.phone}
-                      </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: "var(--fs-body-sm)", fontWeight: "var(--fw-medium)", color: "var(--text-strong)" }}>
+                      {contact.name}
+                    </p>
+                    {(contact.email || contact.phone) && (
+                      <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+                        {contact.email}
+                        {contact.email && contact.phone ? " · " : ""}
+                        {contact.phone}
+                      </p>
                     )}
                   </div>
+                  <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(contact)}
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "var(--radius-md)",
+                        border: "none",
+                        background: "none",
+                        color: "var(--text-muted)",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        transition: "background var(--dur-fast) var(--ease-out)",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--cream-200)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(contact.id)}
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "var(--radius-md)",
+                        border: "none",
+                        background: "none",
+                        color: "var(--text-muted)",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        transition: "background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "#FDF2F0";
+                        e.currentTarget.style.color = "var(--danger)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "none";
+                        e.currentTarget.style.color = "var(--text-muted)";
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <button
-                    onClick={() => startEdit(c)}
-                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  >
-                    <Pencil size={15} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(c.id, c.name)}
-                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              </div>
-            )
-          )}
-        </div>
+              )}
+            </div>
+          ))}
+        </Card>
       )}
     </div>
   );
 }
-
-const input =
-  "flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";

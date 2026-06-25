@@ -1,0 +1,57 @@
+/* ============================================================
+   SnapBill — Webfonts
+   Everett by Nolan Paparelli (weights: Light 300, Medium 500)
+   Only Light + Medium were supplied. Regular/Bold are mapped to
+   the nearest available weight; request additional cuts if needed.
+   ============================================================ */
+
+@font-face {
+  font-family: "Everett";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("../assets/fonts/Everett-Light-web.woff2") format("woff2"),
+       url("../assets/fonts/Everett-Light-web.woff") format("woff"),
+       url("../assets/fonts/Everett-Light-web.ttf") format("truetype");
+}
+
+/* No true Regular cut shipped — Light covers 300/400 display use. */
+@font-face {
+  font-family: "Everett";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/Everett-Light-web.woff2") format("woff2"),
+       url("../assets/fonts/Everett-Light-web.woff") format("woff"),
+       url("../assets/fonts/Everett-Light-web.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Everett";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/Everett-Medium-web.woff2") format("woff2"),
+       url("../assets/fonts/Everett-Medium-web.woff") format("woff"),
+       url("../assets/fonts/Everett-Medium-web.ttf") format("truetype");
+}
+
+/* Medium also covers 600/700 emphasis (no Bold cut shipped). */
+@font-face {
+  font-family: "Everett";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/Everett-Medium-web.woff2") format("woff2"),
+       url("../assets/fonts/Everett-Medium-web.woff") format("woff"),
+       url("../assets/fonts/Everett-Medium-web.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Everett";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/Everett-Medium-web.woff2") format("woff2"),
+       url("../assets/fonts/Everett-Medium-web.woff") format("woff"),
+       url("../assets/fonts/Everett-Medium-web.ttf") format("truetype");
+}

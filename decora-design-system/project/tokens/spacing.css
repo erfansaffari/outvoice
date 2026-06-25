@@ -1,0 +1,61 @@
+/* ============================================================
+   SnapBill — Spacing, radii, shadows, borders, layout, motion
+   Architectural rhythm: generous negative space, crisp lines,
+   restrained shadows. 8px base grid.
+   ============================================================ */
+
+:root {
+  /* ---- Spacing scale (8px base) ---------------------------------- */
+  --space-0: 0;
+  --space-1: 0.25rem;   /* 4 */
+  --space-2: 0.5rem;    /* 8 */
+  --space-3: 0.75rem;   /* 12 */
+  --space-4: 1rem;      /* 16 */
+  --space-5: 1.5rem;    /* 24 */
+  --space-6: 2rem;      /* 32 */
+  --space-7: 3rem;      /* 48 */
+  --space-8: 4rem;      /* 64 */
+  --space-9: 6rem;      /* 96 */
+  --space-10: 8rem;     /* 128 */
+  --space-11: 10rem;    /* 160 */
+
+  /* Section rhythm */
+  --section-y: clamp(4rem, 9vw, 9rem);  /* @kind spacing */
+  --gutter: clamp(1.25rem, 5vw, 4.5rem); /* @kind spacing */
+  --content-max: 1280px;     /* @kind spacing */
+  --content-narrow: 760px;   /* @kind spacing */
+
+  /* ---- Radii — square-leaning; rounded only when needed ---------- */
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 14px;
+  --radius-pill: 999px;
+
+  /* ---- Borders --------------------------------------------------- */
+  --border-width: 1px;          /* @kind spacing */
+  --border-width-strong: 1.5px; /* @kind spacing */
+
+  /* ---- Shadows — subtle, architectural (cool, low-spread) -------- */
+  --shadow-xs: 0 1px 2px rgba(15, 29, 52, 0.05);
+  --shadow-sm: 0 2px 8px rgba(15, 29, 52, 0.06);
+  --shadow-md: 0 10px 30px -12px rgba(15, 29, 52, 0.16);
+  --shadow-lg: 0 28px 60px -28px rgba(15, 29, 52, 0.28);
+  --shadow-inset-hairline: inset 0 0 0 1px rgba(15, 29, 52, 0.06);
+
+  /* ---- Motion ---------------------------------------------------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);     /* @kind other */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);  /* @kind other */
+  --dur-fast: 140ms;    /* @kind other */
+  --dur-base: 240ms;    /* @kind other */
+  --dur-slow: 480ms;    /* @kind other */
+  --dur-image: 700ms;   /* @kind other */
+
+  /* ---- Z-index --------------------------------------------------- */
+  --z-base: 1;       /* @kind other */
+  --z-sticky: 50;    /* @kind other */
+  --z-overlay: 100;  /* @kind other */
+  --z-modal: 200;    /* @kind other */
+  --z-toast: 300;    /* @kind other */
+}

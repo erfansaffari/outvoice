@@ -1,0 +1,49 @@
+<!-- @dsCard group="Colors" viewport="700x180" name="Brand core" subtitle="Navy primary, teal & green secondaries, bronze finish accent" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-page); font-family: var(--font-sans); }
+  .wrap { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; padding: 24px; }
+  .col { display: flex; flex-direction: column; gap: 1px; }
+  .sw { height: 56px; display: flex; align-items: flex-end; padding: 8px 10px; }
+  .sw span { font-size: 11px; font-weight: 500; letter-spacing: .02em; }
+  .lab { font-size: 12px; font-weight: 500; color: var(--text-body); margin: 10px 2px 2px; letter-spacing: .04em; }
+  .hex { font-size: 11px; color: var(--text-muted); margin: 0 2px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="col">
+      <div class="sw" style="background:var(--navy-900)"><span style="color:#fff">900</span></div>
+      <div class="sw" style="background:var(--navy-700)"><span style="color:#fff">700 ·brand</span></div>
+      <div class="sw" style="background:var(--navy-500)"><span style="color:#fff">500</span></div>
+      <div class="sw" style="background:var(--navy-200)"><span style="color:var(--navy-900)">200</span></div>
+      <div class="lab">Navy</div><div class="hex">#1D345C</div>
+    </div>
+    <div class="col">
+      <div class="sw" style="background:var(--teal-700)"><span style="color:#fff">700</span></div>
+      <div class="sw" style="background:var(--teal-600)"><span style="color:#fff">600 ·accent</span></div>
+      <div class="sw" style="background:var(--teal-300)"><span style="color:var(--navy-900)">300</span></div>
+      <div class="sw" style="background:var(--teal-100)"><span style="color:var(--navy-900)">100</span></div>
+      <div class="lab">Teal</div><div class="hex">#178981</div>
+    </div>
+    <div class="col">
+      <div class="sw" style="background:var(--green-700)"><span style="color:#fff">700</span></div>
+      <div class="sw" style="background:var(--green-600)"><span style="color:#fff">600</span></div>
+      <div class="sw" style="background:var(--green-500)"><span style="color:#fff">500</span></div>
+      <div class="sw" style="background:var(--green-300)"><span style="color:var(--navy-900)">300</span></div>
+      <div class="lab">Green</div><div class="hex">#2C4A3E</div>
+    </div>
+    <div class="col">
+      <div class="sw" style="background:var(--bronze-700)"><span style="color:#fff">700</span></div>
+      <div class="sw" style="background:var(--bronze-500)"><span style="color:var(--navy-900)">500 ·finish</span></div>
+      <div class="sw" style="background:var(--bronze-300)"><span style="color:var(--navy-900)">300</span></div>
+      <div class="sw" style="background:var(--bronze-100)"><span style="color:var(--navy-900)">100</span></div>
+      <div class="lab">Bronze</div><div class="hex">#C2A36B</div>
+    </div>
+  </div>
+</body>
+</html>

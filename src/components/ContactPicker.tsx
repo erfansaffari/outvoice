@@ -1,210 +1,307 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { loadContacts } from "@/lib/store";
+import { useState, useRef, useEffect } from "react";
+import { Search, User, X, ChevronDown } from "lucide-react";
 import type { Contact } from "@/lib/types";
-import { Search, UserCheck, X, ChevronDown, UserPlus } from "lucide-react";
 
 interface Props {
-  selectedContact: Contact | null;
-  onSelect: (contact: Contact | null) => void;
+  contacts: Contact[];
+  selected: Contact | null;
+  clientName: string;
+  clientEmail: string;
+  onSelectContact: (contact: Contact | null) => void;
   onNameChange: (name: string) => void;
   onEmailChange: (email: string) => void;
-  name: string;
-  email: string;
 }
 
 export default function ContactPicker({
-  selectedContact,
-  onSelect,
+  contacts,
+  selected,
+  clientName,
+  clientEmail,
+  onSelectContact,
   onNameChange,
   onEmailChange,
-  name,
-  email,
 }: Props) {
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<"pick" | "manual">("pick");
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setContacts(loadContacts());
-  }, []);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setOpen(false);
+        setQuery("");
       }
     }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filtered = query.trim()
-    ? contacts.filter(
-        (c) =>
-          c.name.toLowerCase().includes(query.toLowerCase()) ||
-          c.email.toLowerCase().includes(query.toLowerCase()) ||
-          c.phone.includes(query)
-      )
-    : contacts;
+  const filtered = contacts.filter(
+    (c) =>
+      c.name.toLowerCase().includes(query.toLowerCase()) ||
+      c.email.toLowerCase().includes(query.toLowerCase())
+  );
 
-  function handleSelect(c: Contact) {
-    onSelect(c);
+  function select(c: Contact) {
+    onSelectContact(c);
     onNameChange(c.name);
     onEmailChange(c.email);
-    setQuery("");
     setOpen(false);
-    setMode("pick");
+    setQuery("");
   }
 
-  function handleClear() {
-    onSelect(null);
+  function clear() {
+    onSelectContact(null);
     onNameChange("");
     onEmailChange("");
-    setQuery("");
-    setMode("pick");
   }
 
-  function switchToManual() {
-    onSelect(null);
-    setMode("manual");
-    setOpen(false);
-  }
+  const labelStyle = {
+    fontSize: "var(--fs-eyebrow)",
+    fontWeight: "var(--fw-medium)" as const,
+    letterSpacing: "var(--ls-label)",
+    textTransform: "uppercase" as const,
+    color: "var(--text-muted)",
+    display: "block",
+    marginBottom: "6px",
+  };
 
-  // ── Mode: contact selected ────────────────────────────────────────────────
-  if (selectedContact) {
-    return (
-      <div className="bg-blue-50 border border-blue-300 rounded-xl px-4 py-3 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
-          <span className="text-blue-800 font-bold text-xs">
-            {selectedContact.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
-          </span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-blue-900 text-sm">{selectedContact.name}</p>
-          <p className="text-xs text-blue-500 truncate">{selectedContact.email || selectedContact.phone}</p>
-        </div>
-        <div className="flex items-center gap-1">
-          <UserCheck size={16} className="text-blue-600" />
-          <button
-            onClick={handleClear}
-            className="p-1 text-blue-400 hover:text-blue-700 rounded"
-            title="Change contact"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const inputStyle = {
+    width: "100%",
+    height: "40px",
+    padding: "0 12px",
+    background: "var(--surface-card)",
+    border: "1px solid var(--border-default)",
+    borderRadius: "var(--radius-md)",
+    fontSize: "var(--fs-body-sm)",
+    color: "var(--text-body)",
+    outline: "none",
+    transition: "border-color var(--dur-fast) var(--ease-out)",
+  };
 
-  // ── Mode: manual entry ────────────────────────────────────────────────────
-  if (mode === "manual") {
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-500">Entering manually</span>
-          {contacts.length > 0 && (
-            <button
-              onClick={() => setMode("pick")}
-              className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-            >
-              <ChevronDown size={12} /> Pick from contacts
-            </button>
-          )}
-        </div>
-        <input
-          className={inputCls}
-          placeholder="Client name *"
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
-          autoFocus
-        />
-        <input
-          className={inputCls}
-          type="email"
-          placeholder="Client email (for sending invoice)"
-          value={email}
-          onChange={(e) => onEmailChange(e.target.value)}
-        />
-      </div>
-    );
-  }
-
-  // ── Mode: picker dropdown ─────────────────────────────────────────────────
   return (
-    <div ref={containerRef} className="relative">
-      <div
-        className={`flex items-center border rounded-xl px-3 py-2.5 gap-2 cursor-text bg-white transition-colors ${
-          open ? "border-blue-500 ring-2 ring-blue-100" : "border-gray-300 hover:border-gray-400"
-        }`}
-        onClick={() => setOpen(true)}
-      >
-        <Search size={15} className="text-gray-400 flex-shrink-0" />
-        <input
-          className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
-          placeholder={contacts.length > 0 ? "Search contacts or type a name…" : "Enter client name…"}
-          value={query}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-        />
-        {query && (
-          <button onClick={() => setQuery("")} className="text-gray-300 hover:text-gray-500">
-            <X size={14} />
-          </button>
-        )}
+    <div style={{ display: "grid", gap: "14px" }}>
+      {/* Client selector */}
+      <div>
+        <label style={labelStyle}>Client</label>
+        <div ref={dropdownRef} style={{ position: "relative" }}>
+          {selected ? (
+            /* Selected state */
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "0 12px",
+                height: "40px",
+                background: "var(--teal-100)",
+                border: "1px solid var(--teal-500)",
+                borderRadius: "var(--radius-md)",
+              }}
+            >
+              <span
+                style={{
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  background: "var(--teal-600)",
+                  color: "var(--cream-50)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <User size={12} />
+              </span>
+              <span style={{ flex: 1, fontSize: "var(--fs-body-sm)", fontWeight: "var(--fw-medium)", color: "var(--teal-700)" }}>
+                {selected.name}
+              </span>
+              <button
+                type="button"
+                onClick={clear}
+                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--teal-600)", display: "inline-flex" }}
+              >
+                <X size={15} />
+              </button>
+            </div>
+          ) : (
+            /* Search / dropdown trigger */
+            <div style={{ position: "relative" }}>
+              {contacts.length > 0 ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setOpen((v) => !v)}
+                    style={{
+                      ...inputStyle,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    <User size={14} style={{ color: "var(--text-subtle)", flexShrink: 0 }} />
+                    <span style={{ flex: 1, color: clientName ? "var(--text-body)" : "var(--text-subtle)" }}>
+                      {clientName || "Select a saved contact…"}
+                    </span>
+                    <ChevronDown size={14} style={{ color: "var(--text-subtle)", flexShrink: 0 }} />
+                  </button>
+
+                  {open && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "calc(100% + 4px)",
+                        left: 0,
+                        right: 0,
+                        background: "var(--surface-card)",
+                        border: "1px solid var(--border-default)",
+                        borderRadius: "var(--radius-lg)",
+                        boxShadow: "var(--shadow-md)",
+                        zIndex: 50,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div style={{ padding: "8px 8px 4px", borderBottom: "1px solid var(--border-hairline)" }}>
+                        <div style={{ position: "relative" }}>
+                          <Search size={13} style={{ position: "absolute", left: "9px", top: "50%", transform: "translateY(-50%)", color: "var(--text-subtle)" }} />
+                          <input
+                            autoFocus
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Search contacts…"
+                            style={{
+                              width: "100%",
+                              height: "32px",
+                              paddingLeft: "28px",
+                              paddingRight: "10px",
+                              background: "var(--cream-100)",
+                              border: "1px solid var(--border-hairline)",
+                              borderRadius: "var(--radius-md)",
+                              fontSize: "13px",
+                              color: "var(--text-body)",
+                              outline: "none",
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ maxHeight: "220px", overflowY: "auto" }}>
+                        {filtered.length === 0 ? (
+                          <p style={{ padding: "12px 14px", fontSize: "13px", color: "var(--text-muted)" }}>No contacts found</p>
+                        ) : (
+                          filtered.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => select(c)}
+                              style={{
+                                width: "100%",
+                                textAlign: "left",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "10px",
+                                padding: "10px 12px",
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                borderTop: "1px solid var(--border-hairline)",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--cream-100)")}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                            >
+                              <span
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "50%",
+                                  background: "var(--teal-100)",
+                                  color: "var(--teal-700)",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <User size={13} />
+                              </span>
+                              <span style={{ flex: 1, minWidth: 0 }}>
+                                <span style={{ display: "block", fontSize: "var(--fs-body-sm)", fontWeight: "var(--fw-medium)", color: "var(--text-strong)" }}>
+                                  {c.name}
+                                </span>
+                                {c.email && (
+                                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{c.email}</span>
+                                )}
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                      <div style={{ padding: "8px 12px", borderTop: "1px solid var(--border-hairline)" }}>
+                        <button
+                          type="button"
+                          onClick={() => setOpen(false)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            padding: 0,
+                            fontSize: "12.5px",
+                            color: "var(--text-muted)",
+                            cursor: "pointer",
+                          }}
+                        >
+                          + Enter manually instead
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* No saved contacts — just a plain text input */
+                <input
+                  value={clientName}
+                  onChange={(e) => onNameChange(e.target.value)}
+                  placeholder="Sarah & Tom"
+                  style={inputStyle}
+                />
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {open && (
-        <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-          {filtered.length > 0 ? (
-            <ul className="max-h-52 overflow-y-auto divide-y divide-gray-50">
-              {filtered.map((c) => (
-                <li key={c.id}>
-                  <button
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 text-left transition-colors"
-                    onClick={() => handleSelect(c)}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <span className="text-blue-700 font-bold text-xs">
-                        {c.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800">{c.name}</p>
-                      {(c.email || c.phone) && (
-                        <p className="text-xs text-gray-400 truncate">{c.email || c.phone}</p>
-                      )}
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : query.trim() ? (
-            <p className="px-4 py-3 text-sm text-gray-400">No contacts matching "{query}"</p>
-          ) : (
-            <p className="px-4 py-3 text-sm text-gray-400">No contacts yet — save some on the Contacts page</p>
-          )}
-
-          {/* Enter manually option */}
-          <div className="border-t border-gray-100">
-            <button
-              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 transition-colors font-medium"
-              onClick={switchToManual}
-            >
-              <UserPlus size={15} />
-              {query.trim() ? `Use "${query}" as new client` : "Enter manually (new client)"}
-            </button>
-          </div>
+      {/* Manual name (when no contact selected but contacts exist) */}
+      {!selected && contacts.length > 0 && clientName && (
+        <div>
+          <label style={labelStyle}>Client name</label>
+          <input
+            value={clientName}
+            onChange={(e) => onNameChange(e.target.value)}
+            placeholder="Sarah & Tom"
+            style={inputStyle}
+          />
         </div>
       )}
+
+      {/* Email */}
+      <div>
+        <label style={labelStyle}>Client email</label>
+        <input
+          type="email"
+          value={clientEmail}
+          onChange={(e) => onEmailChange(e.target.value)}
+          placeholder="sarah@example.com"
+          readOnly={!!selected}
+          style={{
+            ...inputStyle,
+            background: selected ? "var(--cream-100)" : "var(--surface-card)",
+            color: selected ? "var(--text-muted)" : "var(--text-body)",
+          }}
+        />
+      </div>
     </div>
   );
 }
-
-const inputCls =
-  "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";

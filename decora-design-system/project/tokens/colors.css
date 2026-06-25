@@ -1,0 +1,96 @@
+/* ============================================================
+   SnapBill — Color tokens
+   Premium architectural finishing. Cream grounds, deep navy
+   structure, muted teal/green secondaries, warm bronze accent.
+   ============================================================ */
+
+:root {
+  /* ---- Brand core -------------------------------------------------- */
+  /* Navy — sampled from the SnapBill wordmark (#1d345c) */
+  --navy-900: #0F1D34;
+  --navy-800: #16294A;
+  --navy-700: #1D345C;   /* brand primary */
+  --navy-600: #2A4673;
+  --navy-500: #3B598C;
+  --navy-400: #6B82A8;
+  --navy-300: #9FAFC8;
+  --navy-200: #CAD4E2;
+  --navy-100: #E6EBF2;
+
+  /* Teal — sampled from the dot-dispersion mark (#178981) */
+  --teal-700: #0E6B65;
+  --teal-600: #178981;   /* secondary accent */
+  --teal-500: #2BA29A;
+  --teal-300: #8FCCC7;
+  --teal-100: #DCEFEC;
+
+  /* Green — muted architectural forest */
+  --green-700: #1F3D33;
+  --green-600: #2C4A3E;
+  --green-500: #3E6557;
+  --green-300: #9BB4AA;
+
+  /* Bronze / gold — warm metallic accent, used sparingly */
+  --bronze-700: #8A6A3B;
+  --bronze-600: #A9854E;
+  --bronze-500: #C2A36B;   /* finish accent */
+  --bronze-300: #E2D2B2;
+  --bronze-100: #F2EADB;
+
+  /* ---- Neutrals — warm cream → charcoal --------------------------- */
+  --cream-50:  #FBFAF6;   /* lightest surface */
+  --cream-100: #F6F3EC;   /* page background */
+  --cream-200: #EDE8DD;   /* sunken / alt section */
+  --cream-300: #E0D9CA;   /* hairline on cream */
+
+  --stone-400: #B7B0A3;
+  --stone-500: #8C867A;   /* muted text */
+  --stone-600: #635E55;
+
+  --charcoal-700: #2E3236;
+  --charcoal-800: #23272B;
+  --charcoal-900: #16191C;   /* near-black ink */
+  --white: #FFFFFF;
+
+  /* ---- Semantic (status) ----------------------------------------- */
+  --success: #2C7A5B;
+  --warning: #B8862F;
+  --danger:  #A8412F;
+  --info:    #178981;
+
+  /* ============================================================
+     SEMANTIC ALIASES — reference these in components
+     ============================================================ */
+
+  /* Surfaces */
+  --surface-page:      var(--cream-100);
+  --surface-raised:    var(--cream-50);
+  --surface-card:      var(--white);
+  --surface-sunken:    var(--cream-200);
+  --surface-inverse:   var(--navy-700);
+  --surface-inverse-2: var(--navy-900);
+
+  /* Text */
+  --text-strong:   var(--navy-900);
+  --text-body:     var(--charcoal-800);
+  --text-muted:    var(--stone-500);
+  --text-subtle:   var(--stone-400);
+  --text-on-dark:  var(--cream-50);
+  --text-on-dark-muted: var(--navy-300);
+  --text-accent:   var(--teal-600);
+  --text-link:     var(--navy-700);
+
+  /* Borders & lines */
+  --border-hairline: var(--cream-300);
+  --border-default:  #DAD3C6;
+  --border-strong:   var(--navy-200);
+  --border-on-dark:  rgba(255, 255, 255, 0.14);
+
+  /* Accents */
+  --accent-primary:   var(--navy-700);
+  --accent-secondary: var(--teal-600);
+  --accent-finish:    var(--bronze-500);
+
+  /* Focus ring */
+  --focus-ring: var(--teal-500);
+}

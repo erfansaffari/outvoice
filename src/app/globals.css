@@ -1,10 +1,255 @@
-@import "tailwindcss";
-
-:root {
-  --brand: #1a56db;
-  --brand-light: #e8f0fe;
+/* ============================================================
+   SnapBill — Everett webfonts
+   ============================================================ */
+@font-face {
+  font-family: "Everett";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/fonts/Everett-Light-web.woff2") format("woff2"),
+       url("/fonts/Everett-Light-web.woff") format("woff"),
+       url("/fonts/Everett-Light-web.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Everett";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/Everett-Light-web.woff2") format("woff2"),
+       url("/fonts/Everett-Light-web.woff") format("woff"),
+       url("/fonts/Everett-Light-web.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Everett";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/Everett-Medium-web.woff2") format("woff2"),
+       url("/fonts/Everett-Medium-web.woff") format("woff"),
+       url("/fonts/Everett-Medium-web.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Everett";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/Everett-Medium-web.woff2") format("woff2"),
+       url("/fonts/Everett-Medium-web.woff") format("woff"),
+       url("/fonts/Everett-Medium-web.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Everett";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/Everett-Medium-web.woff2") format("woff2"),
+       url("/fonts/Everett-Medium-web.woff") format("woff"),
+       url("/fonts/Everett-Medium-web.ttf") format("truetype");
 }
 
+@import "tailwindcss";
+
+/* ============================================================
+   SnapBill Design System — CSS custom properties
+   ============================================================ */
+:root {
+  /* ---- Brand core: Navy ------------------------------------------ */
+  --navy-900: #0F1D34;
+  --navy-800: #16294A;
+  --navy-700: #1D345C;
+  --navy-600: #2A4673;
+  --navy-500: #3B598C;
+  --navy-400: #6B82A8;
+  --navy-300: #9FAFC8;
+  --navy-200: #CAD4E2;
+  --navy-100: #E6EBF2;
+
+  /* ---- Brand core: Teal ------------------------------------------ */
+  --teal-700: #0E6B65;
+  --teal-600: #178981;
+  --teal-500: #2BA29A;
+  --teal-300: #8FCCC7;
+  --teal-100: #DCEFEC;
+
+  /* ---- Brand core: Bronze ---------------------------------------- */
+  --bronze-700: #8A6A3B;
+  --bronze-600: #A9854E;
+  --bronze-500: #C2A36B;
+  --bronze-300: #E2D2B2;
+  --bronze-100: #F2EADB;
+
+  /* ---- Neutrals -------------------------------------------------- */
+  --cream-50:  #FBFAF6;
+  --cream-100: #F6F3EC;
+  --cream-200: #EDE8DD;
+  --cream-300: #E0D9CA;
+  --stone-400: #B7B0A3;
+  --stone-500: #8C867A;
+  --stone-600: #635E55;
+  --charcoal-700: #2E3236;
+  --charcoal-800: #23272B;
+  --charcoal-900: #16191C;
+  --white: #FFFFFF;
+
+  /* ---- Semantic status ------------------------------------------- */
+  --success: #2C7A5B;
+  --warning: #B8862F;
+  --danger:  #A8412F;
+  --info:    #178981;
+
+  /* ---- Semantic surfaces ----------------------------------------- */
+  --surface-page:      var(--cream-100);
+  --surface-raised:    var(--cream-50);
+  --surface-card:      var(--white);
+  --surface-sunken:    var(--cream-200);
+  --surface-inverse:   var(--navy-700);
+  --surface-inverse-2: var(--navy-900);
+
+  /* ---- Semantic text --------------------------------------------- */
+  --text-strong:        var(--navy-900);
+  --text-body:          var(--charcoal-800);
+  --text-muted:         var(--stone-500);
+  --text-subtle:        var(--stone-400);
+  --text-on-dark:       var(--cream-50);
+  --text-on-dark-muted: var(--navy-300);
+  --text-accent:        var(--teal-600);
+  --text-link:          var(--navy-700);
+
+  /* ---- Borders --------------------------------------------------- */
+  --border-hairline: var(--cream-300);
+  --border-default:  #DAD3C6;
+  --border-strong:   var(--navy-200);
+  --border-on-dark:  rgba(255, 255, 255, 0.14);
+
+  /* ---- Accents --------------------------------------------------- */
+  --accent-primary:   var(--navy-700);
+  --accent-secondary: var(--teal-600);
+  --accent-finish:    var(--bronze-500);
+
+  /* ---- Focus ----------------------------------------------------- */
+  --focus-ring: var(--teal-500);
+
+  /* ---- Typography ------------------------------------------------ */
+  --font-sans: "Everett", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-display: var(--font-sans);
+  --fw-light:   300;
+  --fw-regular: 400;
+  --fw-medium:  500;
+
+  --fs-display-xl: clamp(3.5rem, 6vw, 6rem);
+  --fs-display-l:  clamp(2.75rem, 4.5vw, 4.25rem);
+  --fs-display-m:  clamp(2.25rem, 3.4vw, 3.25rem);
+  --fs-h1:      2.5rem;
+  --fs-h2:      2rem;
+  --fs-h3:      1.5rem;
+  --fs-h4:      1.25rem;
+  --fs-body-lg: 1.1875rem;
+  --fs-body:    1.0625rem;
+  --fs-body-sm: 0.9375rem;
+  --fs-caption: 0.8125rem;
+  --fs-eyebrow: 0.75rem;
+
+  --lh-tight:   1.02;
+  --lh-snug:    1.15;
+  --lh-normal:  1.5;
+  --lh-relaxed: 1.65;
+
+  --ls-display: -0.02em;
+  --ls-heading: -0.01em;
+  --ls-body:    0;
+  --ls-eyebrow: 0.18em;
+  --ls-label:   0.04em;
+
+  /* ---- Spacing --------------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+  --section-y: clamp(4rem, 9vw, 9rem);
+  --gutter: clamp(1.25rem, 5vw, 4.5rem);
+  --content-max: 1280px;
+  --content-narrow: 760px;
+
+  /* ---- Radii ----------------------------------------------------- */
+  --radius-none: 0;
+  --radius-sm:   2px;
+  --radius-md:   4px;
+  --radius-lg:   8px;
+  --radius-xl:   14px;
+  --radius-pill: 999px;
+
+  /* ---- Shadows --------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(15, 29, 52, 0.05);
+  --shadow-sm: 0 2px 8px rgba(15, 29, 52, 0.06);
+  --shadow-md: 0 10px 30px -12px rgba(15, 29, 52, 0.16);
+  --shadow-lg: 0 28px 60px -28px rgba(15, 29, 52, 0.28);
+
+  /* ---- Motion ---------------------------------------------------- */
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-slow: 480ms;
+}
+
+/* ============================================================
+   Base element defaults
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-light);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--text-body);
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5 {
+  margin: 0;
+  font-weight: var(--fw-light);
+  color: var(--text-strong);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-heading);
+}
+
+p { margin: 0; }
+a { color: var(--text-link); text-decoration: none; }
+
+::selection { background: var(--teal-100); color: var(--navy-900); }
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Hide number input spinners */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
+
+/* ============================================================
+   Animations
+   ============================================================ */
+@keyframes snapSpin { to { transform: rotate(360deg); } }
+@keyframes snapPing { 75%, 100% { transform: scale(1.7); opacity: 0; } }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   Print
+   ============================================================ */
 @media print {
   .no-print { display: none !important; }
   body { background: white; }

@@ -1,196 +1,250 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getInvoice, saveInvoice, loadProfile } from "@/lib/store";
-import type { Invoice, InvoiceStatus, PhotographerProfile } from "@/lib/types";
+import { getInvoice, loadProfile, saveInvoice } from "@/lib/store";
+import type { Invoice, PhotographerProfile } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
+import { StickyBar, DotMark } from "@/components/ui/Card";
 import {
-  Camera,
-  Copy,
-  Share2,
-  CheckCircle2,
   ArrowLeft,
-  ExternalLink,
+  Camera,
   Send,
-  Printer,
-  Mail,
-  RefreshCw,
-  BadgeDollarSign,
+  Copy,
+  Check,
+  ExternalLink,
+  CheckCircle2,
+  Lock,
 } from "lucide-react";
 
-const STATUS_CONFIG: Record<InvoiceStatus, { label: string; icon: React.ElementType; cls: string }> = {
-  draft: { label: "Draft", icon: Send, cls: "bg-gray-100 text-gray-600" },
-  sent: { label: "Invoice sent — awaiting payment", icon: Send, cls: "bg-blue-50 text-blue-700" },
-  paid: { label: "Paid — payment received!", icon: BadgeDollarSign, cls: "bg-green-50 text-green-700" },
-};
+const fmt = (n: number) =>
+  `$${Number(n || 0)
+    .toFixed(2)
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 
-export default function InvoiceViewPage() {
+const fmtDate = (iso: string) =>
+  new Date(iso + "T12:00:00").toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+const fmtDateShort = (iso: string) =>
+  new Date(iso + "T12:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+function Row({ label, value, muted, green }: { label: string; value: string; muted?: boolean; green?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--fs-body-sm)" }}>
+      <span style={{ color: "var(--text-muted)" }}>{label}</span>
+      <span style={{ fontWeight: "var(--fw-medium)", color: green ? "var(--success)" : muted ? "var(--text-muted)" : "var(--text-strong)" }}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+export default function InvoicePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [profile, setProfile] = useState<PhotographerProfile | null>(null);
-  const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState("");
-  const [emailSent, setEmailSent] = useState(false);
+  const [sendResult, setSendResult] = useState<"success" | "error" | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const refresh = useCallback(() => {
-    const inv = getInvoice(id);
-    if (inv) setInvoice({ ...inv });
+  useEffect(() => {
+    setProfile(loadProfile());
+    const inv = getInvoice(id) ?? null;
+    if (inv) setInvoice(inv);
   }, [id]);
 
+  // Poll for status changes (e.g. payment webhook)
   useEffect(() => {
-    const inv = getInvoice(id);
-    if (!inv) { router.push("/"); return; }
-    setInvoice(inv);
-    setProfile(loadProfile());
-  }, [id, router]);
-
-  // Poll for payment status every 5s (picks up localStorage updates from checkout tab)
-  useEffect(() => {
-    const interval = setInterval(refresh, 5000);
+    const interval = setInterval(() => {
+      const inv = getInvoice(id) ?? null;
+      if (inv) setInvoice(inv);
+    }, 5000);
     return () => clearInterval(interval);
-  }, [refresh]);
-
-  if (!invoice || !profile) {
-    return <div className="py-20 text-center text-gray-400">Loading…</div>;
-  }
-
-  const payUrl = invoice.paymentUrl.startsWith("/")
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}${invoice.paymentUrl}`
-    : invoice.paymentUrl;
-
-  const fmt = (n: number) =>
-    `$${n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-
-  const fmtDate = (iso: string) =>
-    new Date(iso + "T12:00:00").toLocaleDateString("en-US", {
-      year: "numeric", month: "long", day: "numeric",
-    });
-
-  async function handleCopy() {
-    await navigator.clipboard.writeText(payUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  }
-
-  async function handleShare() {
-    if (navigator.share) {
-      await navigator.share({
-        title: `Invoice from ${profile?.name ?? ""}`,
-        text: `Hi ${invoice!.clientName}! Your invoice is ready. Total due: ${fmt(invoice!.calc.totalDue)}`,
-        url: payUrl,
-      });
-    } else {
-      await handleCopy();
-    }
-  }
+  }, [id]);
 
   async function handleSend() {
-    if (!invoice) return;
-    setSendError("");
-
-    if (!invoice.clientEmail) {
-      setSendError("No client email on this invoice. Please add one next time.");
-      // Still mark as sent even without email
-      const updated: Invoice = { ...invoice, status: "sent" };
-      saveInvoice(updated);
-      setInvoice(updated);
-      return;
-    }
-
+    if (!invoice || !profile) return;
     setSending(true);
+    setSendResult(null);
     try {
       const res = await fetch("/api/send-invoice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoice, profile, paymentUrl: payUrl }),
+        body: JSON.stringify({ invoice, profile }),
       });
-
-      if (!res.ok) {
-        const err = await res.json() as { error?: string };
-        throw new Error(err.error ?? "Failed to send");
-      }
-
+      if (!res.ok) throw new Error("Failed");
       const updated: Invoice = { ...invoice, status: "sent" };
       saveInvoice(updated);
       setInvoice(updated);
-      setEmailSent(true);
-    } catch (err) {
-      setSendError(err instanceof Error ? err.message : "Failed to send email");
+      setSendResult("success");
+    } catch {
+      setSendResult("error");
     } finally {
       setSending(false);
     }
   }
 
-  const invoiceNumber = invoice.id.replace("inv_", "INV-").toUpperCase().slice(0, 14);
-  const statusCfg = STATUS_CONFIG[invoice.status];
+  function handleCopy() {
+    if (invoice?.paymentUrl) {
+      void navigator.clipboard.writeText(invoice.paymentUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    }
+  }
+
+  if (!invoice || !profile) {
+    return (
+      <div style={{ padding: "60px 0", textAlign: "center", color: "var(--text-muted)" }}>
+        Loading…
+      </div>
+    );
+  }
+
   const isPaid = invoice.status === "paid";
+  const isSent = invoice.status === "sent";
+  const number = invoice.id.replace("inv_", "INV-").toUpperCase().slice(0, 13);
 
   return (
-    <div className="pb-28">
-      {/* Top bar */}
-      <div className="flex items-center justify-between mb-6 no-print">
-        <button
-          onClick={() => router.push("/")}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700"
-        >
-          <ArrowLeft size={16} /> New invoice
-        </button>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={refresh}
-            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600"
-            title="Refresh payment status"
-          >
-            <RefreshCw size={14} />
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700"
-          >
-            <Printer size={16} /> Print
-          </button>
-        </div>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px", paddingBottom: "96px" }}>
+      {/* Back */}
+      <button
+        type="button"
+        onClick={() => router.push("/")}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          alignSelf: "flex-start",
+          background: "none",
+          border: "none",
+          padding: 0,
+          color: "var(--text-muted)",
+          fontSize: "var(--fs-body-sm)",
+          cursor: "pointer",
+        }}
+      >
+        <ArrowLeft size={16} /> New invoice
+      </button>
 
-      {/* Status banner (non-draft) */}
+      {/* Status banner */}
       {invoice.status !== "draft" && (
-        <div className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium mb-4 no-print ${statusCfg.cls}`}>
-          <statusCfg.icon size={16} />
-          {statusCfg.label}
-          {invoice.clientEmail && invoice.status === "sent" && (
-            <span className="ml-auto text-xs opacity-70">{invoice.clientEmail}</span>
-          )}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "12px 14px",
+            borderRadius: "var(--radius-md)",
+            background: isPaid ? "#E9F1EC" : "var(--teal-100)",
+            color: isPaid ? "#1E5C44" : "var(--teal-700)",
+            fontSize: "var(--fs-body-sm)",
+            fontWeight: "var(--fw-medium)",
+          }}
+        >
+          {isPaid ? <CheckCircle2 size={16} /> : <Send size={16} />}
+          {isPaid ? "Paid — payment received" : "Invoice sent — awaiting payment"}
+        </div>
+      )}
+
+      {sendResult === "error" && (
+        <div style={{ padding: "10px 14px", background: "#FDF2F0", border: "1px solid #F4C7BF", borderRadius: "var(--radius-md)", fontSize: "var(--fs-body-sm)", color: "var(--danger)" }}>
+          Failed to send email. Check your Resend API key.
+        </div>
+      )}
+      {sendResult === "success" && (
+        <div style={{ padding: "10px 14px", background: "#E9F1EC", border: "1px solid #C4DDCE", borderRadius: "var(--radius-md)", fontSize: "var(--fs-body-sm)", color: "var(--success)" }}>
+          Email sent successfully.
         </div>
       )}
 
       {/* Invoice card */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div
+        style={{
+          background: "var(--surface-card)",
+          border: "1px solid var(--border-hairline)",
+          borderRadius: "var(--radius-lg)",
+          overflow: "hidden",
+          boxShadow: "var(--shadow-sm)",
+        }}
+      >
         {/* Brand header */}
         <div
-          className="px-6 py-7 text-white"
-          style={{ backgroundColor: profile.brandColor }}
+          style={{
+            position: "relative",
+            overflow: "hidden",
+            background: "var(--surface-inverse)",
+            color: "var(--cream-50)",
+            padding: "24px 22px",
+          }}
         >
-          <div className="flex items-start justify-between">
+          <DotMark
+            cols={7}
+            rows={6}
+            gap={10}
+            dot={4.5}
+            color="var(--teal-500)"
+            style={{ position: "absolute", top: 18, right: 18, opacity: 0.5 }}
+          />
+          <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px" }}>
             <div>
-              <div className="flex items-center gap-2 font-bold text-lg">
-                <Camera size={20} />
-                {profile.name}
+              <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+                <span
+                  style={{
+                    width: "30px",
+                    height: "30px",
+                    borderRadius: "var(--radius-sm)",
+                    background: "rgba(255,255,255,0.12)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Camera size={17} />
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "1.15rem",
+                    fontWeight: "var(--fw-medium)",
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  {profile.name}
+                </span>
               </div>
-              {profile.tagline && (
-                <p className="text-sm opacity-80 mt-0.5">{profile.tagline}</p>
-              )}
-              <div className="mt-3 text-sm opacity-90 space-y-0.5">
-                {profile.email && <p>{profile.email}</p>}
-                {profile.phone && <p>{profile.phone}</p>}
-              </div>
+              <p style={{ marginTop: "8px", fontSize: "12.5px", color: "var(--navy-200)" }}>{profile.tagline}</p>
+              <p style={{ marginTop: "10px", fontSize: "12px", color: "var(--navy-300)", lineHeight: "1.6" }}>
+                {profile.email}
+                <br />
+                {profile.phone}
+              </p>
             </div>
-            <div className="text-right">
-              <p className="text-xs uppercase tracking-widest opacity-70">Invoice</p>
-              <p className="font-mono font-bold text-sm mt-0.5">{invoiceNumber}</p>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <p style={{ fontSize: "10.5px", letterSpacing: "var(--ls-eyebrow)", textTransform: "uppercase", color: "var(--navy-300)" }}>Invoice</p>
+              <p style={{ marginTop: "4px", fontSize: "13px", fontWeight: "var(--fw-medium)", color: "var(--cream-50)" }}>{number}</p>
               {isPaid && (
-                <span className="inline-block mt-2 bg-white/20 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                <span
+                  style={{
+                    display: "inline-block",
+                    marginTop: "10px",
+                    background: "rgba(255,255,255,0.16)",
+                    color: "var(--cream-50)",
+                    fontSize: "11px",
+                    fontWeight: "var(--fw-medium)",
+                    letterSpacing: "var(--ls-label)",
+                    padding: "3px 9px",
+                    borderRadius: "var(--radius-pill)",
+                  }}
+                >
                   PAID
                 </span>
               )}
@@ -198,149 +252,157 @@ export default function InvoiceViewPage() {
           </div>
         </div>
 
-        {/* Client + dates */}
-        <div className="px-6 py-5 border-b border-gray-100">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Billed to</p>
-              <p className="font-semibold text-gray-900 text-lg">{invoice.clientName}</p>
-              {invoice.clientEmail && (
-                <p className="text-sm text-gray-400">{invoice.clientEmail}</p>
-              )}
-              <p className="text-sm text-gray-500">Event: {fmtDate(invoice.eventDate)}</p>
-            </div>
-            <div className="text-right">
-              <div className="mb-2">
-                <p className="text-xs text-gray-400 uppercase tracking-wide">Invoice date</p>
-                <p className="text-sm font-medium text-gray-700">{fmtDate(invoice.createdAt.split("T")[0])}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide">Due date</p>
-                <p className="text-sm font-medium text-gray-700">{fmtDate(invoice.dueDate)}</p>
-              </div>
-            </div>
+        {/* Bronze finish line */}
+        <div style={{ height: "2px", background: "var(--bronze-500)" }} />
+
+        {/* Billed to + dates */}
+        <div
+          style={{
+            padding: "18px 22px",
+            borderBottom: "1px solid var(--border-hairline)",
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "16px",
+          }}
+        >
+          <div>
+            <p style={{ fontSize: "10.5px", letterSpacing: "var(--ls-eyebrow)", textTransform: "uppercase", color: "var(--text-subtle)" }}>Billed to</p>
+            <p style={{ marginTop: "5px", fontSize: "var(--fs-h4)", fontWeight: "var(--fw-medium)", color: "var(--text-strong)" }}>
+              {invoice.clientName}
+            </p>
+            {invoice.clientEmail && (
+              <p style={{ fontSize: "12.5px", color: "var(--text-muted)" }}>{invoice.clientEmail}</p>
+            )}
+            <p style={{ marginTop: "4px", fontSize: "12.5px", color: "var(--text-muted)" }}>
+              Event · {fmtDate(invoice.eventDate)}
+            </p>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <p style={{ fontSize: "10.5px", letterSpacing: "var(--ls-eyebrow)", textTransform: "uppercase", color: "var(--text-subtle)" }}>Due</p>
+            <p style={{ marginTop: "5px", fontSize: "var(--fs-body-sm)", fontWeight: "var(--fw-medium)", color: "var(--text-body)" }}>
+              {fmtDateShort(invoice.dueDate)}
+            </p>
           </div>
         </div>
 
         {/* Line items */}
-        <div className="px-6 py-5">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left pb-3 text-xs uppercase tracking-wide text-gray-400 font-medium">Description</th>
-                <th className="text-right pb-3 text-xs uppercase tracking-wide text-gray-400 font-medium">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoice.calc.lineItems.map((item, i) => (
-                <tr key={i} className="border-b border-gray-50">
-                  <td className="py-3 text-gray-700">{item.label}</td>
-                  <td className="py-3 text-right font-medium text-gray-900">{fmt(item.amount)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ padding: "18px 22px" }}>
+          <div style={{ display: "grid", gap: "11px" }}>
+            {invoice.calc.lineItems.map((it, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: "14px",
+                  fontSize: "var(--fs-body-sm)",
+                  paddingBottom: "11px",
+                  borderBottom: "1px solid var(--cream-200)",
+                }}
+              >
+                <span style={{ color: "var(--text-body)" }}>{it.label}</span>
+                <span style={{ fontWeight: "var(--fw-medium)", color: "var(--text-strong)", whiteSpace: "nowrap" }}>
+                  {fmt(it.amount)}
+                </span>
+              </div>
+            ))}
+          </div>
 
-          <div className="mt-4 space-y-2">
-            <div className="flex justify-between text-sm text-gray-500">
-              <span>Subtotal</span>
-              <span>{fmt(invoice.calc.subtotal)}</span>
-            </div>
+          <div style={{ marginTop: "14px", display: "grid", gap: "8px" }}>
+            <Row label="Subtotal" value={fmt(invoice.calc.subtotal)} muted />
             {invoice.calc.deposit > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Deposit received</span>
-                <span className="text-green-600 font-medium">−{fmt(invoice.calc.deposit)}</span>
-              </div>
+              <Row label="Deposit received" value={`−${fmt(invoice.calc.deposit)}`} green />
             )}
-            <div className="flex justify-between items-center pt-3 border-t-2 border-gray-900 mt-2">
-              <span className="font-bold text-gray-900">Total Due</span>
-              <span className={`text-2xl font-bold ${isPaid ? "text-green-600 line-through opacity-50" : "text-gray-900"}`}>
-                {fmt(invoice.calc.totalDue)}
-              </span>
-            </div>
-            {isPaid && (
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-green-700">Paid in full</span>
-                <span className="text-2xl font-bold text-green-700">{fmt(invoice.calc.totalDue)}</span>
-              </div>
-            )}
+          </div>
+
+          <div
+            style={{
+              marginTop: "12px",
+              paddingTop: "13px",
+              borderTop: "1.5px solid var(--navy-800)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span style={{ fontWeight: "var(--fw-medium)", color: "var(--text-strong)" }}>Total due</span>
+            <span
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "var(--fs-h3)",
+                fontWeight: "var(--fw-light)",
+                letterSpacing: "var(--ls-display)",
+                color: isPaid ? "var(--success)" : "var(--navy-800)",
+              }}
+            >
+              {fmt(invoice.calc.totalDue)}
+            </span>
           </div>
         </div>
 
         {/* Notes */}
         {invoice.notes && (
-          <div className="px-6 pb-5">
-            <div className="bg-gray-50 rounded-xl p-4">
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Notes</p>
-              <p className="text-sm text-gray-600 whitespace-pre-line">{invoice.notes}</p>
+          <div style={{ padding: "0 22px 18px" }}>
+            <div
+              style={{
+                background: "var(--cream-100)",
+                borderRadius: "var(--radius-md)",
+                padding: "13px 15px",
+              }}
+            >
+              <p style={{ fontSize: "10.5px", letterSpacing: "var(--ls-eyebrow)", textTransform: "uppercase", color: "var(--text-subtle)", marginBottom: "5px" }}>
+                Note
+              </p>
+              <p style={{ fontSize: "12.5px", color: "var(--text-muted)", lineHeight: "var(--lh-normal)" }}>
+                {invoice.notes}
+              </p>
             </div>
           </div>
         )}
 
-        {/* Pay Now CTA — hide when paid */}
-        {!isPaid && (
-          <div className="px-6 pb-6">
-            <a
-              href={invoice.paymentUrl}
-              className="flex items-center justify-center gap-2 w-full py-4 rounded-xl font-bold text-base text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: profile.brandColor }}
+        {/* Pay now (if not paid) */}
+        {!isPaid && invoice.paymentUrl && (
+          <div style={{ padding: "0 22px 22px" }}>
+            <Button
+              variant="accent"
+              size="lg"
+              onClick={() => router.push(invoice.paymentUrl!.replace(window.location.origin, ""))}
+              style={{ width: "100%" }}
+              iconLeft={<ExternalLink size={17} />}
             >
-              <ExternalLink size={18} />
-              Pay Now — {fmt(invoice.calc.totalDue)}
-            </a>
-          </div>
-        )}
-
-        {/* Email sent notice */}
-        {emailSent && (
-          <div className="mx-6 mb-5 flex items-center gap-2 bg-blue-50 text-blue-700 rounded-xl px-4 py-3 text-sm font-medium no-print">
-            <Mail size={16} />
-            Email sent to {invoice.clientEmail}
-          </div>
-        )}
-
-        {sendError && (
-          <div className="mx-6 mb-5 bg-red-50 text-red-700 rounded-xl px-4 py-3 text-sm no-print">
-            {sendError}
+              Pay now — {fmt(invoice.calc.totalDue)}
+            </Button>
           </div>
         )}
       </div>
 
-      {/* Action bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 no-print">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <button
+      {/* Secured by */}
+      <p style={{ textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: "5px", fontSize: "11.5px", color: "var(--text-subtle)" }}>
+        <Lock size={11} /> Secured by SnapBill
+      </p>
+
+      {/* Sticky actions */}
+      <StickyBar>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <Button
+            variant="secondary"
             onClick={handleCopy}
-            className="flex-1 flex items-center justify-center gap-2 border border-gray-300 hover:border-gray-400 text-gray-700 py-3 rounded-xl font-semibold text-sm transition-colors"
+            style={{ flex: 1 }}
+            iconLeft={<Copy size={15} />}
           >
-            {copied ? <CheckCircle2 size={16} className="text-green-600" /> : <Copy size={16} />}
-            {copied ? "Copied!" : "Copy link"}
-          </button>
-          <button
-            onClick={handleShare}
-            className="flex-1 flex items-center justify-center gap-2 border border-gray-300 hover:border-gray-400 text-gray-700 py-3 rounded-xl font-semibold text-sm transition-colors"
-          >
-            <Share2 size={16} />
-            Share
-          </button>
-          <button
+            {copied ? "Copied" : "Copy link"}
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleSend}
-            disabled={isPaid || sending || invoice.status === "sent"}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ backgroundColor: profile.brandColor }}
+            disabled={sending || isPaid || isSent}
+            style={{ flex: 1 }}
+            iconLeft={sending ? undefined : isSent ? <Check size={15} /> : <Send size={15} />}
           >
-            {sending ? (
-              <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Sending…</>
-            ) : invoice.status === "sent" || emailSent ? (
-              <><CheckCircle2 size={16} /> Sent</>
-            ) : isPaid ? (
-              <><BadgeDollarSign size={16} /> Paid</>
-            ) : (
-              <><Mail size={16} /> Send Email</>
-            )}
-          </button>
+            {sending ? "Sending…" : isSent ? "Sent" : isPaid ? "Paid" : "Send"}
+          </Button>
         </div>
-      </div>
+      </StickyBar>
     </div>
   );
 }

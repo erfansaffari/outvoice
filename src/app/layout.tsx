@@ -1,12 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
-
 export const metadata: Metadata = {
-  title: "SnapBill — Instant Invoicing",
-  description: "Fast invoicing for photographers",
+  title: "SnapBill — Instant Invoicing for Photographers",
+  description: "Generate and send a professional invoice with a payment link in under a minute.",
 };
 
 export const viewport: Viewport = {
@@ -17,9 +14,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-gray-50 min-h-screen`}>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

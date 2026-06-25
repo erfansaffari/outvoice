@@ -1,197 +1,326 @@
 "use client";
 
-import { useSearchParams, useParams } from "next/navigation";
-import { useState, Suspense } from "react";
-import { Lock, CheckCircle2, CreditCard, ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { getInvoice, saveInvoice } from "@/lib/store";
-import type { Invoice } from "@/lib/types";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { getInvoice, loadProfile, saveInvoice } from "@/lib/store";
+import type { Invoice, PhotographerProfile } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { DotMark } from "@/components/ui/Card";
+import { ArrowLeft, Lock, CheckCircle2, Camera, Loader2 } from "lucide-react";
 
-function PayContent() {
+const fmt = (n: number) =>
+  `$${Number(n || 0)
+    .toFixed(2)
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+
+function SnapMark() {
+  return (
+    <span
+      style={{
+        width: "28px",
+        height: "28px",
+        borderRadius: "2px",
+        background: "var(--navy-700)",
+        color: "var(--cream-50)",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <Camera size={15} />
+    </span>
+  );
+}
+
+export default function PayPage() {
   const { id } = useParams<{ id: string }>();
-  const params = useSearchParams();
-  const amtCents = Number(params.get("amt") ?? "0");
-  const clientName = params.get("client") ?? "Client";
-  const amtDollars = (amtCents / 100).toFixed(2);
-
+  const router = useRouter();
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [profile, setProfile] = useState<PhotographerProfile | null>(null);
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvc, setCvc] = useState("");
-  const [name, setName] = useState(clientName);
 
-  function handleCardNumber(v: string) {
-    const digits = v.replace(/\D/g, "").slice(0, 16);
-    setCardNumber(digits.replace(/(.{4})/g, "$1 ").trim());
-  }
+  const [name, setName] = useState("");
+  const [card, setCard] = useState("4242 4242 4242 4242");
+  const [exp, setExp] = useState("09 / 28");
+  const [cvc, setCvc] = useState("123");
 
-  function handleExpiry(v: string) {
-    const digits = v.replace(/\D/g, "").slice(0, 4);
-    if (digits.length >= 3) {
-      setExpiry(`${digits.slice(0, 2)} / ${digits.slice(2)}`);
-    } else {
-      setExpiry(digits);
-    }
-  }
+  useEffect(() => {
+    const inv = getInvoice(id) ?? null;
+    const prof = loadProfile();
+    setInvoice(inv);
+    setProfile(prof);
+    if (inv) setName(inv.clientName);
+  }, [id]);
 
   async function handlePay() {
     setStep("processing");
-    await new Promise((r) => setTimeout(r, 1800));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Mark invoice as paid in localStorage (same-device flow)
-    if (id) {
-      const inv = getInvoice(id);
-      if (inv) {
-        const updated: Invoice = { ...inv, status: "paid" };
-        saveInvoice(updated);
-      }
-      // Notify server-side hook (fire-and-forget)
-      fetch("/api/mark-paid", {
+    if (invoice) {
+      const updated: Invoice = { ...invoice, status: "paid" };
+      saveInvoice(updated);
+      await fetch("/api/mark-paid", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoiceId: id }),
+        body: JSON.stringify({ invoiceId: invoice.id }),
       }).catch(() => {});
     }
 
     setStep("success");
   }
 
-  const canPay =
-    name.trim().length > 1 &&
-    cardNumber.replace(/\s/g, "").length === 16 &&
-    expiry.replace(/\s/g, "").length === 5 &&
-    cvc.length >= 3;
+  if (!invoice || !profile) {
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--surface-page)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "var(--text-muted)" }}>Loading…</p>
+      </div>
+    );
+  }
+
+  const amt = fmt(invoice.calc.totalDue);
 
   if (step === "success") {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 text-center">
-        <div className="bg-white rounded-3xl shadow-xl p-10 max-w-sm w-full">
-          <div className="flex justify-center mb-4">
-            <CheckCircle2 size={64} className="text-green-500" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment successful!</h1>
-          <p className="text-gray-500 mb-1">
-            <strong className="text-gray-700">${amtDollars}</strong> received
-          </p>
-          <p className="text-gray-400 text-sm mb-8">
-            A receipt has been sent to your email.
-          </p>
-          <div className="text-xs text-gray-400 flex items-center justify-center gap-1">
-            <Lock size={12} /> Secured by SnapBill
-          </div>
-        </div>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "var(--surface-page)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          padding: "40px 24px",
+          gap: "6px",
+        }}
+      >
+        <span
+          style={{
+            width: "72px",
+            height: "72px",
+            borderRadius: "50%",
+            background: "#E9F1EC",
+            color: "var(--success)",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: "16px",
+          }}
+        >
+          <CheckCircle2 size={36} />
+        </span>
+        <h1
+          style={{
+            fontSize: "var(--fs-h2)",
+            fontWeight: "var(--fw-light)",
+            letterSpacing: "var(--ls-heading)",
+            color: "var(--text-strong)",
+          }}
+        >
+          Payment successful
+        </h1>
+        <p style={{ fontSize: "var(--fs-body)", color: "var(--text-muted)", marginTop: "4px" }}>
+          <strong style={{ color: "var(--text-body)", fontWeight: "var(--fw-medium)" }}>{amt}</strong> received
+        </p>
+        <p style={{ fontSize: "12.5px", color: "var(--text-subtle)", marginBottom: "28px" }}>
+          A receipt has been emailed to you.
+        </p>
+        <Button variant="primary" onClick={() => router.push(`/invoice/${invoice.id}`)}>
+          Back to invoice
+        </Button>
+        <p
+          style={{
+            marginTop: "24px",
+            fontSize: "11.5px",
+            color: "var(--text-subtle)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+          }}
+        >
+          <Lock size={11} /> Secured by SnapBill
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Stripe-style header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
-            <ArrowLeft size={16} /> Back
-          </Link>
-          <div className="flex items-center gap-1.5 text-sm text-gray-500">
-            <Lock size={14} className="text-green-600" />
-            Secure payment
-          </div>
-        </div>
+    <div style={{ minHeight: "100vh", background: "var(--surface-page)", display: "flex", flexDirection: "column" }}>
+      {/* Header */}
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          height: "52px",
+          padding: "0 18px",
+          borderBottom: "1px solid var(--border-hairline)",
+          background: "var(--surface-raised)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => router.back()}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            background: "none",
+            border: "none",
+            color: "var(--text-muted)",
+            fontSize: "var(--fs-body-sm)",
+            cursor: "pointer",
+          }}
+        >
+          <ArrowLeft size={16} /> Back
+        </button>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            fontSize: "12.5px",
+            color: "var(--text-muted)",
+          }}
+        >
+          <Lock size={13} style={{ color: "var(--success)" }} /> Secure payment
+        </span>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-10">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 w-full max-w-sm">
-          {/* Amount */}
-          <div className="text-center mb-6 pb-6 border-b border-gray-100">
-            <p className="text-gray-500 text-sm mb-1">Amount due</p>
-            <p className="text-4xl font-bold text-gray-900">${amtDollars}</p>
-            <p className="text-sm text-gray-400 mt-1">From: {decodeURIComponent(clientName)}</p>
+      {/* Content */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "28px 20px",
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: "400px" }}>
+          {/* Photographer badge */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "9px",
+              marginBottom: "24px",
+            }}
+          >
+            <SnapMark />
+            <span style={{ fontSize: "15px", fontWeight: "var(--fw-medium)", color: "var(--text-strong)", letterSpacing: "-0.01em" }}>
+              {profile.name}
+            </span>
           </div>
 
-          {/* Card form */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Name on card</label>
-              <input
-                className={input}
-                placeholder="Sarah Thompson"
+          {/* Payment card */}
+          <div
+            style={{
+              background: "var(--surface-card)",
+              border: "1px solid var(--border-hairline)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-sm)",
+              overflow: "hidden",
+            }}
+          >
+            {/* Amount header with dot mark */}
+            <div
+              style={{
+                position: "relative",
+                overflow: "hidden",
+                textAlign: "center",
+                padding: "22px 22px 20px",
+                borderBottom: "1px solid var(--border-hairline)",
+              }}
+            >
+              <DotMark
+                cols={5}
+                rows={4}
+                gap={9}
+                dot={4}
+                color="var(--teal-300)"
+                style={{ position: "absolute", top: 12, right: 12, opacity: 0.6 }}
+              />
+              <p style={{ fontSize: "var(--fs-body-sm)", color: "var(--text-muted)" }}>Amount due</p>
+              <p
+                style={{
+                  marginTop: "4px",
+                  fontFamily: "var(--font-display)",
+                  fontSize: "var(--fs-display-m)",
+                  fontWeight: "var(--fw-light)",
+                  letterSpacing: "var(--ls-display)",
+                  color: "var(--text-strong)",
+                }}
+              >
+                {amt}
+              </p>
+              <p style={{ fontSize: "12.5px", color: "var(--text-subtle)" }}>To {profile.name}</p>
+            </div>
+
+            {/* Form */}
+            <div style={{ padding: "22px", display: "grid", gap: "13px" }}>
+              <Input
+                label="Name on card"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Card number</label>
-              <div className="relative">
-                <input
-                  className={`${input} pl-10`}
-                  placeholder="1234 5678 9012 3456"
-                  value={cardNumber}
-                  onChange={(e) => handleCardNumber(e.target.value)}
-                  inputMode="numeric"
-                />
-                <CreditCard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Expiry</label>
-                <input
-                  className={input}
+              <Input
+                label="Card number"
+                value={card}
+                onChange={(e) => setCard(e.target.value)}
+                maxLength={19}
+              />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <Input
+                  label="Expiry"
+                  value={exp}
+                  onChange={(e) => setExp(e.target.value)}
                   placeholder="MM / YY"
-                  value={expiry}
-                  onChange={(e) => handleExpiry(e.target.value)}
-                  inputMode="numeric"
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">CVC</label>
-                <input
-                  className={input}
-                  placeholder="123"
-                  maxLength={4}
+                <Input
+                  label="CVC"
                   value={cvc}
-                  onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                  inputMode="numeric"
+                  onChange={(e) => setCvc(e.target.value)}
+                  maxLength={4}
                 />
               </div>
+
+              <Button
+                variant="accent"
+                size="lg"
+                onClick={handlePay}
+                disabled={step === "processing"}
+                style={{ width: "100%", marginTop: "4px" }}
+                iconLeft={
+                  step === "processing"
+                    ? <Loader2 size={16} style={{ animation: "snapSpin 0.9s linear infinite" }} />
+                    : <Lock size={16} />
+                }
+              >
+                {step === "processing" ? "Processing…" : `Pay ${amt}`}
+              </Button>
+
+              <p
+                style={{
+                  textAlign: "center",
+                  fontSize: "11.5px",
+                  color: "var(--text-subtle)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "5px",
+                }}
+              >
+                <Lock size={11} /> Test mode — no real charges
+              </p>
             </div>
-
-            <button
-              onClick={handlePay}
-              disabled={!canPay || step === "processing"}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-bold text-base transition-colors mt-2"
-            >
-              {step === "processing" ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Processing…
-                </>
-              ) : (
-                <>
-                  <Lock size={16} />
-                  Pay ${amtDollars}
-                </>
-              )}
-            </button>
           </div>
-
-          <p className="text-center text-xs text-gray-400 mt-4 flex items-center justify-center gap-1">
-            <Lock size={11} />
-            Test mode — no real charges
-          </p>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
-
-export default function PayPage() {
-  return (
-    <Suspense>
-      <PayContent />
-    </Suspense>
-  );
-}
-
-const input =
-  "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";

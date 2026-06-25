@@ -1,0 +1,32 @@
+<!-- @dsCard group="Spacing" viewport="700x170" name="Radii & shadows" subtitle="Square-leaning radii, subtle cool shadows" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-page); font-family: var(--font-sans); padding: 26px 32px; display: flex; gap: 40px; }
+  .grp { display: flex; gap: 18px; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .box { width: 62px; height: 62px; background: var(--surface-card); border: 1px solid var(--border-default); }
+  .sbox { width: 62px; height: 62px; background: var(--surface-card); border-radius: var(--radius-md); }
+  .nm { font-size: 11px; color: var(--text-body); font-weight: 500; }
+  .divider { width: 1px; background: var(--border-default); }
+</style>
+</head>
+<body>
+  <div class="grp">
+    <div class="item"><div class="box" style="border-radius:var(--radius-sm)"></div><div class="nm">sm · 2</div></div>
+    <div class="item"><div class="box" style="border-radius:var(--radius-md)"></div><div class="nm">md · 4</div></div>
+    <div class="item"><div class="box" style="border-radius:var(--radius-lg)"></div><div class="nm">lg · 8</div></div>
+    <div class="item"><div class="box" style="border-radius:var(--radius-pill)"></div><div class="nm">pill</div></div>
+  </div>
+  <div class="divider"></div>
+  <div class="grp">
+    <div class="item"><div class="sbox" style="box-shadow:var(--shadow-xs)"></div><div class="nm">xs</div></div>
+    <div class="item"><div class="sbox" style="box-shadow:var(--shadow-sm)"></div><div class="nm">sm</div></div>
+    <div class="item"><div class="sbox" style="box-shadow:var(--shadow-md)"></div><div class="nm">md</div></div>
+    <div class="item"><div class="sbox" style="box-shadow:var(--shadow-lg)"></div><div class="nm">lg</div></div>
+  </div>
+</body>
+</html>

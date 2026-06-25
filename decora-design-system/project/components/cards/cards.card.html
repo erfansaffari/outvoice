@@ -1,0 +1,41 @@
+<!-- @dsCard group="Components" viewport="700x460" name="Cards — service preview & marquee" subtitle="ServiceCard (placeholder) and LogoMarquee" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-page); font-family: var(--font-sans); padding: 26px 30px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .mq { margin-top: 24px; border-top: 1px solid var(--border-hairline); padding-top: 20px; }
+  .logo { font-family: var(--font-sans); font-weight: 500; font-size: 20px; color: var(--navy-400); letter-spacing: .02em; white-space: nowrap; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { ServiceCard, LogoMarquee } = window.DecoraDesignSystem_779afc;
+    const names = ["RIVERA","BLOOM & OAK","NORTHLIGHT","EVERLY","STILL & CO","ATELIER 9"];
+    function Demo() {
+      return (
+        <React.Fragment>
+          <div className="row">
+            <ServiceCard index={1} eyebrow="Voice fill" title="Capture jobs by talking" description="Describe the shoot out loud and the invoice writes itself — package, hours, add-ons, deposit." cta="Learn more" />
+            <ServiceCard index={2} eyebrow="Pay links" title="One tap to get paid" description="A secure pay link rides on every invoice. Clients pay by card in seconds." cta="Learn more" />
+          </div>
+          <div className="mq">
+            <LogoMarquee speed={26}>
+              {names.map((n,i)=><span className="logo" key={i}>{n}</span>)}
+            </LogoMarquee>
+          </div>
+        </React.Fragment>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+  </script>
+</body>
+</html>
