@@ -2,7 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import type { PhotographerProfile } from "@/lib/types";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// OpenRouter is OpenAI-API-compatible — just swap baseURL and API key.
+// Default model: openai/gpt-4o-mini (fast, cheap, great for structured extraction)
+// Override by setting OPENROUTER_MODEL in your .env.local, e.g.:
+//   OPENROUTER_MODEL=anthropic/claude-3.5-sonnet
+//   OPENROUTER_MODEL=google/gemini-2.0-flash
+//   OPENROUTER_MODEL=openai/gpt-4o
+const MODEL = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini";
+
+const openrouter = new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
+  defaultHeaders: {
+    "HTTP-Referer": "https://snapbill.app",
+    "X-Title": "SnapBill",
+  },
+});
 
 export interface ParsedInvoiceFields {
   clientName: string;
@@ -27,8 +42,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing transcript or profile" }, { status: 400 });
   }
 
-  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.startsWith("sk-your")) {
-    return NextResponse.json({ error: "OPENAI_API_KEY not configured" }, { status: 500 });
+  if (!process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY.startsWith("sk-or-your")) {
+    return NextResponse.json({ error: "OPENROUTER_API_KEY not configured" }, { status: 500 });
   }
 
   const today = new Date().toISOString().split("T")[0];
@@ -66,14 +81,14 @@ Return ONLY a valid JSON object with this exact shape (no explanation, no markdo
 
 Rules:
 - If the photographer says "yesterday", "today", or relative dates, resolve to an actual date based on today: ${today}
-- If they mention a package by approximate name (e.g. "full day", "half day"), match to the closest package id
-- If they mention add-ons by approximate name (e.g. "second shooter", "drone"), match to the closest add-on id
+- Match packages by approximate name (e.g. "full day", "half day") to the closest package id
+- Match add-ons by approximate name (e.g. "second shooter", "drone") to the closest add-on id
 - If hoursWorked is not mentioned, use 0 so the form uses the package default
-- If something is not mentioned, use an empty string or 0 as appropriate`;
+- If something is not mentioned, use empty string or 0 as appropriate`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const completion = await openrouter.chat.completions.create({
+      model: MODEL,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
@@ -83,10 +98,10 @@ Rules:
     });
 
     const raw = completion.choices[0]?.message?.content;
-    if (!raw) throw new Error("No response from GPT-4o");
+    if (!raw) throw new Error("No response from model");
 
     const parsed = JSON.parse(raw) as ParsedInvoiceFields;
-    return NextResponse.json({ fields: parsed });
+    return NextResponse.json({ fields: parsed, model: MODEL });
   } catch (err) {
     console.error("Parse invoice error:", err);
     return NextResponse.json({ error: "Failed to parse invoice fields" }, { status: 500 });
