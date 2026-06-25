@@ -2,13 +2,14 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Mic, MicOff, Loader2, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
-import type { PhotographerProfile } from "@/lib/types";
+import type { Contact, PhotographerProfile } from "@/lib/types";
 import type { ParsedInvoiceFields } from "@/app/api/parse-invoice/route";
 
 type Step = "idle" | "recording" | "parsing" | "done" | "error";
 
 interface Props {
   profile: PhotographerProfile;
+  contacts: Contact[];
   onFill: (fields: ParsedInvoiceFields) => void;
 }
 
@@ -60,7 +61,7 @@ declare global {
   }
 }
 
-export default function VoiceCapture({ profile, onFill }: Props) {
+export default function VoiceCapture({ profile, contacts, onFill }: Props) {
   const [step, setStep] = useState<Step>("idle");
   const [transcript, setTranscript] = useState("");
   const [interimText, setInterimText] = useState("");
@@ -143,7 +144,7 @@ export default function VoiceCapture({ profile, onFill }: Props) {
       const res = await fetch("/api/parse-invoice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: text, profile }),
+        body: JSON.stringify({ transcript: text, profile, contacts }),
       });
 
       if (!res.ok) {

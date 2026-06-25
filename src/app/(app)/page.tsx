@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { loadProfile, saveInvoice, generateId, addDays, findContactByName } from "@/lib/store";
+import { loadProfile, loadContacts, saveInvoice, generateId, addDays } from "@/lib/store";
 import { calculateInvoice } from "@/lib/calc";
 import { generatePaymentLink } from "@/lib/payments";
 import type { Contact, PhotographerProfile } from "@/lib/types";
@@ -26,6 +26,7 @@ const today = new Date().toISOString().split("T")[0];
 export default function NewInvoicePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<PhotographerProfile | null>(null);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [generating, setGenerating] = useState(false);
 
   // Form state
@@ -46,6 +47,7 @@ export default function NewInvoicePage() {
   useEffect(() => {
     const p = loadProfile();
     setProfile(p);
+    setContacts(loadContacts());
     setOvertimeRate(p.defaultOvertimeRate);
     if (p.packages.length > 0) {
       const first = p.packages[0];
@@ -93,13 +95,15 @@ export default function NewInvoicePage() {
   }
 
   function handleVoiceFill(fields: ParsedInvoiceFields) {
-    // Resolve client — try contacts first, then fall back to raw AI text
-    const match = fields.clientName ? findContactByName(fields.clientName) : null;
-    if (match) {
-      setSelectedContact(match);
-      setClientName(match.name);
-      // Prefer contact's saved email; use AI-detected one only as fallback
-      setClientEmail(match.email || fields.clientEmail || "");
+    // AI returns the contactId it matched — look it up directly, no fuzzy logic needed
+    const matchedContact = fields.contactId
+      ? contacts.find((c) => c.id === fields.contactId) ?? null
+      : null;
+
+    if (matchedContact) {
+      setSelectedContact(matchedContact);
+      setClientName(matchedContact.name);
+      setClientEmail(matchedContact.email || fields.clientEmail || "");
     } else {
       setSelectedContact(null);
       if (fields.clientName) setClientName(fields.clientName);
@@ -181,7 +185,7 @@ export default function NewInvoicePage() {
       </div>
 
       {/* Voice fill */}
-      <VoiceCapture profile={profile} onFill={handleVoiceFill} />
+      <VoiceCapture profile={profile} contacts={contacts} onFill={handleVoiceFill} />
 
       {/* Client + Date */}
       <Card>

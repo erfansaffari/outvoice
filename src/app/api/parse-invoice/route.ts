@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import type { PhotographerProfile } from "@/lib/types";
+import type { Contact, PhotographerProfile } from "@/lib/types";
 
-// OpenRouter is OpenAI-API-compatible — just swap baseURL and API key.
-// Default model: openai/gpt-4o-mini (fast, cheap, great for structured extraction)
-// Override by setting OPENROUTER_MODEL in your .env.local, e.g.:
-//   OPENROUTER_MODEL=anthropic/claude-3.5-sonnet
-//   OPENROUTER_MODEL=google/gemini-2.0-flash
-//   OPENROUTER_MODEL=openai/gpt-4o
 const MODEL = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini";
 
 const openrouter = new OpenAI({
@@ -20,13 +14,14 @@ const openrouter = new OpenAI({
 });
 
 export interface ParsedInvoiceFields {
+  contactId: string;   // matched contact id, or "" if not found
   clientName: string;
   clientEmail: string;
-  eventDate: string; // YYYY-MM-DD or ""
-  packageId: string; // matched id from profile.packages, or ""
+  eventDate: string;   // YYYY-MM-DD or ""
+  packageId: string;
   packageRate: number; // 0 = use package default
   hoursWorked: number; // 0 = use package default
-  overtimeRate: number; // 0 = use profile default
+  overtimeRate: number;// 0 = use profile default
   travelEnabled: boolean;
   travelFee: number;
   selectedAddOnIds: string[];
@@ -35,8 +30,12 @@ export interface ParsedInvoiceFields {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json() as { transcript: string; profile: PhotographerProfile };
-  const { transcript, profile } = body;
+  const body = await req.json() as {
+    transcript: string;
+    profile: PhotographerProfile;
+    contacts?: Contact[];
+  };
+  const { transcript, profile, contacts = [] } = body;
 
   if (!transcript || !profile) {
     return NextResponse.json({ error: "Missing transcript or profile" }, { status: 400 });
@@ -48,10 +47,20 @@ export async function POST(req: NextRequest) {
 
   const today = new Date().toISOString().split("T")[0];
 
+  const contactsSection = contacts.length > 0
+    ? `\nSAVED CONTACTS (match the spoken name to one of these — use the exact id):
+${contacts.map((c) => `- id: "${c.id}" | name: "${c.name}" | email: "${c.email}" | phone: "${c.phone}"`).join("\n")}
+
+Contact matching rules:
+- Normalize variations: "and" = "&", ignore middle names, handle nicknames
+- If the spoken name clearly refers to a saved contact, return that contact's id in "contactId" and use their name/email
+- If no saved contact matches, return "contactId": "" and extract the name/email from the transcript\n`
+    : '\n(No saved contacts — extract client name and email from transcript)\n';
+
   const systemPrompt = `You are an assistant that helps a photographer fill out invoice forms by parsing spoken descriptions of completed jobs.
 
-Extract invoice fields from the user's voice transcript and return a JSON object. Use ONLY the packages and add-ons listed below — match them as closely as possible from what the photographer says.
-
+Extract invoice fields from the user's voice transcript and return a JSON object.
+${contactsSection}
 Today's date: ${today}
 
 PHOTOGRAPHER PROFILE:
@@ -65,26 +74,27 @@ ${profile.addOns.map((a) => `- id: "${a.id}" | name: "${a.name}" | price: $${a.p
 
 Return ONLY a valid JSON object with this exact shape (no explanation, no markdown):
 {
-  "clientName": string,
-  "clientEmail": string,
+  "contactId": "exact contact id from the list above, or empty string if no match",
+  "clientName": "the client's name as spoken (or from matched contact)",
+  "clientEmail": "email if mentioned or from matched contact, else empty string",
   "eventDate": "YYYY-MM-DD or empty string",
-  "packageId": "exact id from the list above, or empty string",
-  "packageRate": number (0 = use package default),
-  "hoursWorked": number (0 = use package's includedHours),
-  "overtimeRate": number (0 = use photographer default),
-  "travelEnabled": boolean,
-  "travelFee": number,
-  "selectedAddOnIds": ["exact ids from the list above"],
-  "depositPaid": number,
-  "notes": string
+  "packageId": "exact package id from the list above, or empty string",
+  "packageRate": 0,
+  "hoursWorked": 0,
+  "overtimeRate": 0,
+  "travelEnabled": false,
+  "travelFee": 0,
+  "selectedAddOnIds": [],
+  "depositPaid": 0,
+  "notes": ""
 }
 
 Rules:
-- If the photographer says "yesterday", "today", or relative dates, resolve to an actual date based on today: ${today}
-- Match packages by approximate name (e.g. "full day", "half day") to the closest package id
-- Match add-ons by approximate name (e.g. "second shooter", "drone") to the closest add-on id
+- Resolve relative dates ("yesterday", "today", "last Saturday") using today: ${today}
+- Match packages by approximate name ("full day", "half day") to the closest package id
+- Match add-ons by approximate name ("second shooter", "drone") to the closest add-on id
 - If hoursWorked is not mentioned, use 0 so the form uses the package default
-- If something is not mentioned, use empty string or 0 as appropriate`;
+- If something is not mentioned, use empty string or 0`;
 
   try {
     const completion = await openrouter.chat.completions.create({
