@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SnapBill — Instant Invoicing for Photographers
 
-## Getting Started
+Send a professional invoice with a payment link in under 60 seconds, right from the field.
 
-First, run the development server:
+## Demo Flow
+
+1. Open the app (pre-loaded with "Matt Rivera Photography" profile)
+2. Enter client name, pick a package, adjust hours and add-ons
+3. Tap **Generate Invoice** — total calculates instantly
+4. View the polished branded invoice, copy the link or tap **Mark Sent**
+5. Client clicks **Pay Now** → lands on the mock checkout → enters card → success
+
+## Running Locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Production Build
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm start
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy to Vercel
 
-## Learn More
+```bash
+npx vercel --prod
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Swapping Mock Stripe for Real Stripe
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The mock payment link is isolated in one place. To switch to real Stripe Payment Links:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Install the Stripe SDK: `npm install stripe`
+2. Add `STRIPE_SECRET_KEY=sk_test_...` to `.env.local`
+3. Replace the mock block in `src/app/api/payment-link/route.ts`:
 
-## Deploy on Vercel
+```typescript
+// Replace the mock comment block with:
+import Stripe from "stripe";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+const priceId = await stripe.prices.create({
+  currency: "usd",
+  unit_amount: amountCents,
+  product_data: { name: `Photography — ${clientName}` },
+});
+const link = await stripe.paymentLinks.create({
+  line_items: [{ price: priceId.id, quantity: 1 }],
+});
+return NextResponse.json({ url: link.url });
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+That's the only file that needs to change. Everything else (form, invoice view, calc) stays the same.
+
+## Structure
+
+```
+src/
+  app/
+    (app)/              # Main app pages (Nav + layout)
+      page.tsx          # New Invoice form
+      settings/         # Profile, packages, add-ons
+      invoice/[id]/     # Polished invoice view
+    (checkout)/
+      pay/[id]/         # Mock Stripe checkout (standalone layout)
+    api/payment-link/   # POST → returns payment URL
+  lib/
+    types.ts            # Domain types
+    calc.ts             # Invoice total calculation
+    store.ts            # localStorage + seed data
+    payments.ts         # Payment link client helper
+  components/
+    Nav.tsx             # Top navigation
+```
+
+## Tech Stack
+
+- **Next.js 16** (App Router) + TypeScript
+- **Tailwind CSS** — mobile-first, print-friendly
+- **localStorage** — no backend/DB required
+- **Lucide React** — icons
