@@ -96,10 +96,45 @@ export function deleteContact(id: string): void {
   localStorage.setItem(CONTACTS_KEY, JSON.stringify(all));
 }
 
+/** Normalize a name for fuzzy matching: lowercase, collapse spaces, swap & ↔ and */
+function normalizeName(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/\s*&\s*/g, " and ")   // "Sarah & Tom" → "sarah and tom"
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Score how well two normalized names overlap (word intersection / union) */
+function nameScore(a: string, b: string): number {
+  const wa = new Set(a.split(" ").filter(Boolean));
+  const wb = new Set(b.split(" ").filter(Boolean));
+  let common = 0;
+  wa.forEach((w) => { if (wb.has(w)) common++; });
+  const union = new Set([...wa, ...wb]).size;
+  return union === 0 ? 0 : common / union;
+}
+
 export function findContactByName(name: string): Contact | undefined {
   if (!name.trim()) return undefined;
-  const lower = name.toLowerCase().trim();
-  return loadContacts().find((c) => c.name.toLowerCase().includes(lower));
+  const needle = normalizeName(name);
+  const contacts = loadContacts();
+
+  // First pass: exact normalized match or one contains the other
+  const exact = contacts.find((c) => {
+    const hay = normalizeName(c.name);
+    return hay === needle || hay.includes(needle) || needle.includes(hay);
+  });
+  if (exact) return exact;
+
+  // Second pass: best word-overlap score ≥ 0.5 (e.g. "Sarah Tom" vs "Sarah & Tom Johnson")
+  let best: Contact | undefined;
+  let bestScore = 0;
+  for (const c of contacts) {
+    const score = nameScore(normalizeName(c.name), needle);
+    if (score > bestScore) { bestScore = score; best = c; }
+  }
+  return bestScore >= 0.5 ? best : undefined;
 }
 
 // ── Utilities ────────────────────────────────────────────────────────────────

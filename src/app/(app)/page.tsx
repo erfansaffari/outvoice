@@ -93,20 +93,18 @@ export default function NewInvoicePage() {
   }
 
   function handleVoiceFill(fields: ParsedInvoiceFields) {
-    if (fields.clientName) {
-      // Try to match voice-detected name to a saved contact
-      const match = findContactByName(fields.clientName);
-      if (match) {
-        setSelectedContact(match);
-        setClientName(match.name);
-        setClientEmail(fields.clientEmail || match.email);
-      } else {
-        setSelectedContact(null);
-        setClientName(fields.clientName);
-        if (fields.clientEmail) setClientEmail(fields.clientEmail);
-      }
+    // Resolve client — try contacts first, then fall back to raw AI text
+    const match = fields.clientName ? findContactByName(fields.clientName) : null;
+    if (match) {
+      setSelectedContact(match);
+      setClientName(match.name);
+      // Prefer contact's saved email; use AI-detected one only as fallback
+      setClientEmail(match.email || fields.clientEmail || "");
+    } else {
+      setSelectedContact(null);
+      if (fields.clientName) setClientName(fields.clientName);
+      if (fields.clientEmail) setClientEmail(fields.clientEmail);
     }
-    if (fields.clientEmail && !selectedContact) setClientEmail(fields.clientEmail);
     if (fields.eventDate) setEventDate(fields.eventDate);
     if (fields.notes) setNotes(fields.notes);
     if (fields.depositPaid > 0) setDepositPaid(fields.depositPaid);
