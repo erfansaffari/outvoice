@@ -6,11 +6,12 @@ import { loadProfile, saveInvoice, generateId, addDays } from "@/lib/store";
 import { calculateInvoice } from "@/lib/calc";
 import { generatePaymentLink } from "@/lib/payments";
 import type { PhotographerProfile } from "@/lib/types";
+import type { ParsedInvoiceFields } from "@/app/api/parse-invoice/route";
+import VoiceCapture from "@/components/VoiceCapture";
 import {
   ChevronDown,
   MapPin,
   Zap,
-  Users,
   Calendar,
   User,
   Clock,
@@ -89,6 +90,30 @@ export default function NewInvoicePage() {
     );
   }
 
+  function handleVoiceFill(fields: ParsedInvoiceFields) {
+    if (fields.clientName) setClientName(fields.clientName);
+    if (fields.clientEmail) setClientEmail(fields.clientEmail);
+    if (fields.eventDate) setEventDate(fields.eventDate);
+    if (fields.notes) setNotes(fields.notes);
+    if (fields.depositPaid > 0) setDepositPaid(fields.depositPaid);
+    if (fields.travelEnabled) {
+      setTravelEnabled(true);
+      if (fields.travelFee > 0) setTravelFee(fields.travelFee);
+    }
+    if (fields.selectedAddOnIds?.length > 0) setSelectedAddOnIds(fields.selectedAddOnIds);
+
+    // Package — match id then apply defaults
+    const pkg = fields.packageId ? profile?.packages.find((p) => p.id === fields.packageId) : null;
+    if (pkg) {
+      setPackageId(pkg.id);
+      setPackageRate(fields.packageRate > 0 ? fields.packageRate : pkg.rate);
+      setHoursWorked(fields.hoursWorked > 0 ? fields.hoursWorked : pkg.includedHours);
+    } else if (fields.hoursWorked > 0) {
+      setHoursWorked(fields.hoursWorked);
+    }
+    if (fields.overtimeRate > 0) setOvertimeRate(fields.overtimeRate);
+  }
+
   async function handleGenerate() {
     if (!clientName.trim() || !calc) return;
     setGenerating(true);
@@ -142,6 +167,9 @@ export default function NewInvoicePage() {
         <h1 className="text-2xl font-bold text-gray-900">New Invoice</h1>
         <p className="text-gray-500 text-sm mt-1">Fill in the job details — your total calculates automatically.</p>
       </div>
+
+      {/* Voice fill */}
+      <VoiceCapture profile={profile} onFill={handleVoiceFill} />
 
       {/* Client + Date */}
       <Card>
