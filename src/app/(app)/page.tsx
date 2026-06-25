@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { loadProfile, saveInvoice, generateId, addDays } from "@/lib/store";
+import { loadProfile, saveInvoice, generateId, addDays, findContactByName } from "@/lib/store";
 import { calculateInvoice } from "@/lib/calc";
 import { generatePaymentLink } from "@/lib/payments";
-import type { PhotographerProfile } from "@/lib/types";
+import type { Contact, PhotographerProfile } from "@/lib/types";
 import type { ParsedInvoiceFields } from "@/app/api/parse-invoice/route";
 import VoiceCapture from "@/components/VoiceCapture";
+import ContactPicker from "@/components/ContactPicker";
 import {
   ChevronDown,
   MapPin,
@@ -28,6 +29,7 @@ export default function NewInvoicePage() {
   const [generating, setGenerating] = useState(false);
 
   // Form state
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [clientName, setClientName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
   const [eventDate, setEventDate] = useState(today);
@@ -91,8 +93,20 @@ export default function NewInvoicePage() {
   }
 
   function handleVoiceFill(fields: ParsedInvoiceFields) {
-    if (fields.clientName) setClientName(fields.clientName);
-    if (fields.clientEmail) setClientEmail(fields.clientEmail);
+    if (fields.clientName) {
+      // Try to match voice-detected name to a saved contact
+      const match = findContactByName(fields.clientName);
+      if (match) {
+        setSelectedContact(match);
+        setClientName(match.name);
+        setClientEmail(fields.clientEmail || match.email);
+      } else {
+        setSelectedContact(null);
+        setClientName(fields.clientName);
+        if (fields.clientEmail) setClientEmail(fields.clientEmail);
+      }
+    }
+    if (fields.clientEmail && !selectedContact) setClientEmail(fields.clientEmail);
     if (fields.eventDate) setEventDate(fields.eventDate);
     if (fields.notes) setNotes(fields.notes);
     if (fields.depositPaid > 0) setDepositPaid(fields.depositPaid);
@@ -175,22 +189,14 @@ export default function NewInvoicePage() {
       <Card>
         <CardTitle icon={<User size={16} />}>Client & Event</CardTitle>
         <div className="grid gap-4 mt-4">
-          <Field label="Client name *">
-            <input
-              className={input}
-              placeholder="Sarah & Tom"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              autoFocus
-            />
-          </Field>
-          <Field label="Client email (for sending invoice)">
-            <input
-              className={input}
-              type="email"
-              placeholder="sarah@example.com"
-              value={clientEmail}
-              onChange={(e) => setClientEmail(e.target.value)}
+          <Field label="Client *">
+            <ContactPicker
+              selectedContact={selectedContact}
+              onSelect={setSelectedContact}
+              onNameChange={setClientName}
+              onEmailChange={setClientEmail}
+              name={clientName}
+              email={clientEmail}
             />
           </Field>
           <Field label="Event date">

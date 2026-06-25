@@ -1,7 +1,8 @@
-import type { Invoice, PhotographerProfile } from "./types";
+import type { Contact, Invoice, PhotographerProfile } from "./types";
 
 const PROFILE_KEY = "snapbill_profile";
 const INVOICES_KEY = "snapbill_invoices";
+const CONTACTS_KEY = "snapbill_contacts";
 
 export const DEFAULT_PROFILE: PhotographerProfile = {
   name: "Matt Rivera Photography",
@@ -64,6 +65,44 @@ export function saveInvoice(invoice: Invoice): void {
 export function getInvoice(id: string): Invoice | undefined {
   return loadInvoices().find((i) => i.id === id);
 }
+
+// ── Contacts ────────────────────────────────────────────────────────────────
+
+export function loadContacts(): Contact[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CONTACTS_KEY);
+    return raw ? (JSON.parse(raw) as Contact[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveContact(contact: Contact): void {
+  if (typeof window === "undefined") return;
+  const all = loadContacts();
+  const idx = all.findIndex((c) => c.id === contact.id);
+  if (idx >= 0) {
+    all[idx] = contact;
+  } else {
+    all.unshift(contact);
+  }
+  localStorage.setItem(CONTACTS_KEY, JSON.stringify(all));
+}
+
+export function deleteContact(id: string): void {
+  if (typeof window === "undefined") return;
+  const all = loadContacts().filter((c) => c.id !== id);
+  localStorage.setItem(CONTACTS_KEY, JSON.stringify(all));
+}
+
+export function findContactByName(name: string): Contact | undefined {
+  if (!name.trim()) return undefined;
+  const lower = name.toLowerCase().trim();
+  return loadContacts().find((c) => c.name.toLowerCase().includes(lower));
+}
+
+// ── Utilities ────────────────────────────────────────────────────────────────
 
 export function generateId(): string {
   return `inv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;

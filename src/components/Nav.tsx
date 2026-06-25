@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Camera, Settings, FileText, History } from "lucide-react";
+import { Camera, Settings, FileText, History, Users } from "lucide-react";
 
 export default function Nav() {
   const path = usePathname();
@@ -31,6 +31,7 @@ export default function Nav() {
         <nav className="flex items-center gap-1">
           {link("/", "New Invoice", FileText)}
           {link("/history", "History", History)}
+          {link("/contacts", "Contacts", Users)}
           {link("/settings", "Settings", Settings)}
         </nav>
       </div>

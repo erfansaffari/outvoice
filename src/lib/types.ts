@@ -1,3 +1,10 @@
+export interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
 export interface Package {
   id: string;
   name: string;
