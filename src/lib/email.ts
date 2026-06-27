@@ -1,7 +1,7 @@
 import type { Invoice, PhotographerProfile } from "./types";
 
 const fmt = (n: number) =>
-  `$${n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+  `$${Number(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 
 const fmtDate = (iso: string) =>
   new Date(iso + "T12:00:00").toLocaleDateString("en-US", {
@@ -10,20 +10,56 @@ const fmtDate = (iso: string) =>
     day: "numeric",
   });
 
+const fmtDateShort = (iso: string) =>
+  new Date(iso + "T12:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+/** Inline SVG of the dot-dispersion brand mark (teal dots fading right). */
+function dotMarkSvg(cols = 7, rows = 5, dot = 4, gap = 10): string {
+  const w = cols * (dot + gap) - gap;
+  const h = rows * (dot + gap) - gap;
+  let circles = "";
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const fade = 1 - (c / (cols - 0.4)) * 0.92;
+      const opacity = Math.max(0.06, fade).toFixed(2);
+      const cx = c * (dot + gap) + dot / 2;
+      const cy = r * (dot + gap) + dot / 2;
+      circles += `<circle cx="${cx}" cy="${cy}" r="${dot / 2}" fill="#2BA29A" opacity="${opacity}"/>`;
+    }
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${circles}</svg>`;
+}
+
 export function buildInvoiceEmail(
   invoice: Invoice,
   profile: PhotographerProfile,
   paymentUrl: string
 ): { subject: string; html: string } {
-  const invoiceNumber = invoice.id.replace("inv_", "INV-").toUpperCase().slice(0, 14);
-  const brand = profile.brandColor;
+  const invoiceNumber = invoice.id.replace("inv_", "INV-").toUpperCase().slice(0, 13);
+  const dotMark = dotMarkSvg();
+
+  /* ---- Colors (DS tokens hard-coded for email) ---- */
+  const navy   = "#1D345C";
+  const teal   = "#178981";
+  const bronze = "#C2A36B";
+  const cream  = "#F6F3EC";
+  const cream2 = "#EDE8DD";
+  const stone  = "#8C867A";
+  const charcoal = "#23272B";
+  const navyLight = "#CAD4E2";
+  const success  = "#2C7A5B";
+  const fontStack = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
   const lineItemRows = invoice.calc.lineItems
     .map(
       (item) => `
       <tr>
-        <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#374151;font-size:14px;">${item.label}</td>
-        <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#111827;font-size:14px;font-weight:600;text-align:right;">${fmt(item.amount)}</td>
+        <td style="padding:10px 0;border-bottom:1px solid ${cream2};font-family:${fontStack};font-size:14px;color:${charcoal};">${item.label}</td>
+        <td style="padding:10px 0;border-bottom:1px solid ${cream2};font-family:${fontStack};font-size:14px;font-weight:500;color:${charcoal};text-align:right;white-space:nowrap;">${fmt(item.amount)}</td>
       </tr>`
     )
     .join("");
@@ -31,136 +67,174 @@ export function buildInvoiceEmail(
   const depositRow =
     invoice.calc.deposit > 0
       ? `<tr>
-        <td style="padding:10px 0;color:#6b7280;font-size:14px;">Deposit received</td>
-        <td style="padding:10px 0;color:#059669;font-size:14px;font-weight:600;text-align:right;">−${fmt(invoice.calc.deposit)}</td>
+        <td style="padding:8px 0;font-family:${fontStack};font-size:14px;color:${stone};">Deposit received</td>
+        <td style="padding:8px 0;font-family:${fontStack};font-size:14px;font-weight:500;color:${success};text-align:right;">−${fmt(invoice.calc.deposit)}</td>
       </tr>`
       : "";
+
+  const notesSection = invoice.notes
+    ? `<tr>
+        <td style="padding:0 32px 20px;">
+          <div style="background:${cream};border-radius:4px;padding:13px 15px;">
+            <div style="font-family:${fontStack};font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:${stone};margin-bottom:6px;">Note</div>
+            <div style="font-family:${fontStack};font-size:13px;color:${stone};line-height:1.5;">${invoice.notes}</div>
+          </div>
+        </td>
+      </tr>`
+    : "";
 
   const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Invoice from ${profile.name}</title>
 </head>
-<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:32px 16px;">
-    <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+<body style="margin:0;padding:0;background:${cream2};font-family:${fontStack};">
 
-          <!-- Brand header -->
-          <tr>
-            <td style="background:${brand};padding:28px 32px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <div style="color:#ffffff;font-size:18px;font-weight:700;">${profile.name}</div>
-                    ${profile.tagline ? `<div style="color:rgba(255,255,255,0.8);font-size:13px;margin-top:2px;">${profile.tagline}</div>` : ""}
-                  </td>
-                  <td align="right">
-                    <div style="color:rgba(255,255,255,0.7);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;">Invoice</div>
-                    <div style="color:#ffffff;font-size:13px;font-weight:700;font-family:monospace;margin-top:2px;">${invoiceNumber}</div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+<table width="100%" cellpadding="0" cellspacing="0" style="background:${cream2};padding:32px 16px;">
+  <tr>
+    <td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
 
-          <!-- Client + dates -->
-          <tr>
-            <td style="padding:24px 32px 0;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <div style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Billed to</div>
-                    <div style="font-size:20px;font-weight:700;color:#111827;">${invoice.clientName}</div>
-                    <div style="font-size:13px;color:#6b7280;margin-top:2px;">Event: ${fmtDate(invoice.eventDate)}</div>
-                  </td>
-                  <td align="right" style="vertical-align:top;">
-                    <div style="font-size:11px;color:#9ca3af;margin-bottom:2px;">Invoice date</div>
-                    <div style="font-size:13px;color:#374151;font-weight:500;">${fmtDate(invoice.createdAt.split("T")[0])}</div>
-                    <div style="font-size:11px;color:#9ca3af;margin-top:8px;margin-bottom:2px;">Due date</div>
-                    <div style="font-size:13px;color:#374151;font-weight:500;">${fmtDate(invoice.dueDate)}</div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+        <!-- Invoice card -->
+        <tr>
+          <td style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(15,29,52,0.08);">
+            <table width="100%" cellpadding="0" cellspacing="0">
 
-          <!-- Line items -->
-          <tr>
-            <td style="padding:24px 32px 0;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #e5e7eb;">
-                <tr>
-                  <th style="padding:10px 0;text-align:left;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;font-weight:500;">Description</th>
-                  <th style="padding:10px 0;text-align:right;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;font-weight:500;">Amount</th>
-                </tr>
-                ${lineItemRows}
-                <tr>
-                  <td style="padding:8px 0;color:#6b7280;font-size:14px;">Subtotal</td>
-                  <td style="padding:8px 0;color:#374151;font-size:14px;text-align:right;">${fmt(invoice.calc.subtotal)}</td>
-                </tr>
-                ${depositRow}
-                <tr>
-                  <td colspan="2" style="padding:0;"><div style="border-top:2px solid #111827;margin:8px 0;"></div></td>
-                </tr>
-                <tr>
-                  <td style="padding:8px 0;font-size:16px;font-weight:700;color:#111827;">Total Due</td>
-                  <td style="padding:8px 0;font-size:22px;font-weight:700;color:#111827;text-align:right;">${fmt(invoice.calc.totalDue)}</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+              <!-- Navy brand header -->
+              <tr>
+                <td style="background:${navy};padding:24px 28px;position:relative;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="vertical-align:top;">
+                        <!-- Logo mark + name -->
+                        <table cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="vertical-align:middle;">
+                              <div style="display:inline-block;width:28px;height:28px;background:rgba(255,255,255,0.12);border-radius:2px;text-align:center;line-height:28px;font-size:14px;">📷</div>
+                            </td>
+                            <td style="padding-left:9px;vertical-align:middle;">
+                              <span style="font-family:${fontStack};font-size:16px;font-weight:500;color:#FBFAF6;letter-spacing:0.01em;">${profile.name}</span>
+                            </td>
+                          </tr>
+                        </table>
+                        ${profile.tagline ? `<div style="margin-top:8px;font-family:${fontStack};font-size:12px;color:${navyLight};">${profile.tagline}</div>` : ""}
+                        <div style="margin-top:10px;font-family:${fontStack};font-size:11px;color:#9FAFC8;line-height:1.6;">
+                          ${profile.email ? `${profile.email}<br/>` : ""}${profile.phone ?? ""}
+                        </div>
+                      </td>
+                      <td style="vertical-align:top;text-align:right;">
+                        <!-- Dot mark SVG -->
+                        <div style="margin-bottom:12px;">${dotMark}</div>
+                        <div style="font-family:${fontStack};font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#9FAFC8;">Invoice</div>
+                        <div style="margin-top:4px;font-family:${fontStack};font-size:13px;font-weight:500;color:#FBFAF6;">${invoiceNumber}</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
 
-          ${
-            invoice.notes
-              ? `<tr>
-            <td style="padding:20px 32px 0;">
-              <div style="background:#f9fafb;border-radius:10px;padding:16px;">
-                <div style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Note from ${profile.name}</div>
-                <div style="font-size:14px;color:#6b7280;">${invoice.notes}</div>
-              </div>
-            </td>
-          </tr>`
-              : ""
-          }
+              <!-- Bronze finish line -->
+              <tr>
+                <td style="background:${bronze};height:2px;font-size:0;line-height:0;">&nbsp;</td>
+              </tr>
 
-          <!-- Pay Now CTA -->
-          <tr>
-            <td style="padding:28px 32px;">
-              <a href="${paymentUrl}"
-                style="display:block;background:${brand};color:#ffffff;text-decoration:none;text-align:center;padding:16px;border-radius:12px;font-size:16px;font-weight:700;">
-                Pay Now — ${fmt(invoice.calc.totalDue)}
-              </a>
-            </td>
-          </tr>
+              <!-- Billed to + dates -->
+              <tr>
+                <td style="padding:20px 28px;border-bottom:1px solid ${cream2};">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="vertical-align:top;">
+                        <div style="font-family:${fontStack};font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:${stone};margin-bottom:5px;">Billed to</div>
+                        <div style="font-family:${fontStack};font-size:18px;font-weight:500;color:${navy};letter-spacing:-0.01em;">${invoice.clientName}</div>
+                        ${invoice.clientEmail ? `<div style="margin-top:2px;font-family:${fontStack};font-size:12px;color:${stone};">${invoice.clientEmail}</div>` : ""}
+                        <div style="margin-top:4px;font-family:${fontStack};font-size:12px;color:${stone};">Event · ${fmtDate(invoice.eventDate)}</div>
+                      </td>
+                      <td style="vertical-align:top;text-align:right;">
+                        <div style="font-family:${fontStack};font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:${stone};margin-bottom:5px;">Due</div>
+                        <div style="font-family:${fontStack};font-size:13px;font-weight:500;color:${charcoal};">${fmtDateShort(invoice.dueDate)}</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
 
-          <!-- Footer -->
-          <tr>
-            <td style="padding:16px 32px 24px;border-top:1px solid #f3f4f6;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="font-size:12px;color:#9ca3af;">
-                    ${profile.email ? `<span>${profile.email}</span>` : ""}
-                    ${profile.phone ? `<span style="margin-left:12px;">${profile.phone}</span>` : ""}
-                  </td>
-                  <td align="right" style="font-size:12px;color:#d1d5db;">Sent via SnapBill</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+              <!-- Line items -->
+              <tr>
+                <td style="padding:20px 28px 0;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    ${lineItemRows}
+                    <!-- Subtotal -->
+                    <tr>
+                      <td style="padding:10px 0 6px;font-family:${fontStack};font-size:13px;color:${stone};">Subtotal</td>
+                      <td style="padding:10px 0 6px;font-family:${fontStack};font-size:13px;color:${stone};text-align:right;">${fmt(invoice.calc.subtotal)}</td>
+                    </tr>
+                    ${depositRow}
+                    <!-- Divider -->
+                    <tr>
+                      <td colspan="2" style="padding:0;"><div style="height:1.5px;background:${navy};margin:4px 0 10px;"></div></td>
+                    </tr>
+                    <!-- Total due -->
+                    <tr>
+                      <td style="padding:6px 0 20px;font-family:${fontStack};font-size:14px;font-weight:500;color:${charcoal};">Total due</td>
+                      <td style="padding:6px 0 20px;font-family:${fontStack};font-size:26px;font-weight:300;color:${navy};letter-spacing:-0.02em;text-align:right;">${fmt(invoice.calc.totalDue)}</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
 
-        </table>
-      </td>
-    </tr>
-  </table>
+              <!-- Notes -->
+              ${notesSection}
+
+              <!-- Pay Now CTA -->
+              ${paymentUrl ? `<tr>
+                <td style="padding:4px 28px 28px;">
+                  <a href="${paymentUrl}"
+                    style="display:block;background:${teal};color:#FBFAF6;text-decoration:none;text-align:center;padding:14px 20px;border-radius:8px;font-family:${fontStack};font-size:15px;font-weight:500;letter-spacing:0.01em;">
+                    Pay now — ${fmt(invoice.calc.totalDue)}
+                  </a>
+                </td>
+              </tr>` : ""}
+
+              <!-- Footer -->
+              <tr>
+                <td style="padding:14px 28px 20px;border-top:1px solid ${cream2};">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="font-family:${fontStack};font-size:11px;color:${stone};">
+                        ${profile.email ? `<span>${profile.email}</span>` : ""}
+                        ${profile.email && profile.phone ? `<span style="margin:0 8px;color:${cream2};">·</span>` : ""}
+                        ${profile.phone ? `<span>${profile.phone}</span>` : ""}
+                      </td>
+                      <td style="text-align:right;font-family:${fontStack};font-size:11px;color:#B7B0A3;">Sent via SnapBill</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+        <!-- Below-card note -->
+        <tr>
+          <td style="padding:16px 0 0;text-align:center;font-family:${fontStack};font-size:11px;color:${stone};">
+            This invoice was sent by ${profile.name} using SnapBill.
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+
 </body>
 </html>`;
 
   return {
-    subject: `Invoice from ${profile.name} — ${fmt(invoice.calc.totalDue)} due ${fmtDate(invoice.dueDate)}`,
+    subject: `Invoice from ${profile.name} — ${fmt(invoice.calc.totalDue)} due ${fmtDateShort(invoice.dueDate)}`,
     html,
   };
 }
